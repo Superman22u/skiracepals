@@ -1,0 +1,9 @@
+{
+  "name": "Ski Race Pals",
+  "short_name": "Race Pals",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b4f86",
+  "theme_color": "#0b4f86",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
