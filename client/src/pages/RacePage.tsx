@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
 import { disciplineLabel, formatRaceDate, genderLabel, lastSeasonFis, rankLabel } from "../format";
@@ -9,6 +9,7 @@ const emptySlots: (Skier | null)[] = [null, null, null, null, null];
 
 export function RacePage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user, refresh } = useAuth();
   const [race, setRace] = useState<RaceDetail | null>(null);
   const [error, setError] = useState("");
@@ -26,6 +27,7 @@ export function RacePage() {
   const [raceDate, setRaceDate] = useState("");
   const [skierName, setSkierName] = useState("");
   const [nation, setNation] = useState("");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function load() {
     const next = await api<RaceDetail>(`/api/races/${id}`);
@@ -157,6 +159,19 @@ export function RacePage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update the race");
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeRace() {
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/admin/races/${id}`, { method: "DELETE" });
+      await refresh();
+      navigate("/");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete the race");
       setBusy(false);
     }
   }
@@ -401,6 +416,26 @@ export function RacePage() {
               Save race
             </button>
           </form>
+          <div className="card form">
+            <h3>Delete race</h3>
+            {confirmingDelete ? (
+              <>
+                <p className="alert">
+                  Delete {race.place}? The result and every bet on it go with it. This cannot be undone.
+                </p>
+                <button className="danger" type="button" disabled={busy} onClick={() => void removeRace()}>
+                  {busy ? "Deleting…" : "Delete race"}
+                </button>
+                <button className="ghost" type="button" disabled={busy} onClick={() => setConfirmingDelete(false)}>
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button className="danger" type="button" onClick={() => setConfirmingDelete(true)}>
+                Delete race
+              </button>
+            )}
+          </div>
           <form className="card form" onSubmit={addSkier}>
             <h3>Add a skier</h3>
             <label>

@@ -402,6 +402,24 @@ router.patch(
   }),
 );
 
+router.delete(
+  "/admin/races/:id",
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    const id = raceId(req);
+    if (!Number.isInteger(id) || id <= 0) {
+      res.status(400).json({ error: "Race not found" });
+      return;
+    }
+    const [result] = await pool.query<ResultSetHeader>("DELETE FROM races WHERE id = ?", [id]);
+    if (result.affectedRows === 0) {
+      res.status(404).json({ error: "Race not found" });
+      return;
+    }
+    res.status(204).end();
+  }),
+);
+
 router.post(
   "/admin/skiers",
   requireAdmin,
