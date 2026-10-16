@@ -2,11 +2,15 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
-import { disciplineLabel, formatRaceDate, genderLabel, lastSeasonFis, monthLabel } from "../format";
+import { formatRaceDate, lastSeasonFis, monthLabel } from "../format";
+import { useI18n } from "../i18n";
 import type { Discipline, Gender, RaceSummary } from "../types";
+
+const disciplines: Discipline[] = ["DH", "SG", "GS", "SL", "AC"];
 
 export function RacesPage() {
   const { user, refresh } = useAuth();
+  const { t, lang } = useI18n();
   const [races, setRaces] = useState<RaceSummary[] | null>(null);
   const [error, setError] = useState("");
   const [gender, setGender] = useState<Gender | "all">("all");
@@ -23,7 +27,7 @@ export function RacesPage() {
   }
 
   useEffect(() => {
-    load().catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not load races"));
+    load().catch((err: unknown) => setError(err instanceof Error ? err.message : "couldNotLoadRaces"));
   }, []);
 
   const visible = useMemo(() => {
@@ -55,60 +59,61 @@ export function RacesPage() {
       setRaceDate("");
       await load();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Could not add the race");
+      setFormError(err instanceof Error ? err.message : "couldNotAddRace");
     }
   }
 
-  if (error) return <p className="alert">{error}</p>;
-  if (!races) return <p className="muted">Loading races…</p>;
+  if (error) return <p className="alert">{t(error)}</p>;
+  if (!races) return <p className="muted">{t("loadingRaces")}</p>;
 
   const openCount = races.filter((race) => race.bettingOpen).length;
 
   return (
     <div className="stack">
-      <p className="rule">
-        Name the first five before race day. A top-5 skier scores 1. The correct rank scores 3.
-      </p>
+      <p className="rule">{t("ruleRaces")}</p>
       <div className="filters">
         {(["all", "W", "M"] as const).map((value) => (
           <button key={value} className={gender === value ? "chip on" : "chip"} onClick={() => setGender(value)} type="button">
-            {value === "all" ? "All" : genderLabel[value]}
+            {value === "all" ? t("all") : t(`gender_${value}`)}
           </button>
         ))}
         <button className={openOnly ? "chip on" : "chip"} onClick={() => setOpenOnly((value) => !value)} type="button">
-          {openOnly ? "Open only" : "Full season"}
+          {openOnly ? t("openOnly") : t("fullSeason")}
         </button>
       </div>
-      <p className="muted">{openCount} races still open</p>
+      <p className="muted">{t("racesOpen", { count: openCount })}</p>
       <p className="fine">
         <a href={lastSeasonFis} target="_blank" rel="noreferrer">
-          Last season's races and results on FIS
+          {t("lastSeasonFis")}
         </a>
       </p>
-      {groups.length === 0 ? <p className="card empty">No races in this view.</p> : null}
+      {groups.length === 0 ? <p className="card empty">{t("noRaces")}</p> : null}
       {groups.map(([month, items]) => (
         <section key={month} className="stack">
-          <h2>{monthLabel(`${month}-01`)}</h2>
+          <h2>{monthLabel(`${month}-01`, lang)}</h2>
           {items.map((race) => (
             <div key={race.id} className="card race">
               <Link className="race-main" to={`/races/${race.id}`}>
                 <div>
                   <p className="place">{race.place}</p>
                   <p className="meta">
-                    {disciplineLabel[race.discipline]} · {genderLabel[race.gender]}
+                    {t(`discipline_${race.discipline}`)} · {t(`gender_${race.gender}`)}
                   </p>
-                  <p className="meta">{formatRaceDate(race.raceDate)}</p>
+                  <p className="meta">{formatRaceDate(race.raceDate, lang)}</p>
                 </div>
                 <div className="race-side">
                   <span className={race.hasResults ? "pill scored" : race.bettingOpen ? "pill open" : "pill closed"}>
-                    {race.hasResults ? "Result" : race.bettingOpen ? "Open" : "Closed"}
+                    {race.hasResults ? t("result") : race.bettingOpen ? t("open") : t("closed")}
                   </span>
-                  <strong>{race.points != null ? `${race.points} pts` : race.hasBet ? "Bet in" : "No bet"}</strong>
+                  <strong>
+                    {race.points != null ? t("pointsShort", { points: race.points }) : race.hasBet ? t("betIn") : t("noBet")}
+                  </strong>
                 </div>
               </Link>
               {race.lastYearUrl ? (
                 <a className="year-link" href={race.lastYearUrl} target="_blank" rel="noreferrer">
-                  Last year's result{race.lastYearWinner ? ` · ${race.lastYearWinner}` : ""}
+                  {t("lastYearResult")}
+                  {race.lastYearWinner ? ` · ${t("wonBy", { winner: race.lastYearWinner })}` : ""}
                 </a>
               ) : null}
             </div>
@@ -117,44 +122,44 @@ export function RacesPage() {
       ))}
       {user.isAdmin ? (
         <form className="card form" onSubmit={addRace}>
-          <h2>Add a race</h2>
+          <h2>{t("addARace")}</h2>
           <label>
-            Place
+            {t("place")}
             <input value={place} onChange={(event) => setPlace(event.target.value)} required />
           </label>
           <label>
-            Discipline
+            {t("discipline")}
             <select value={discipline} onChange={(event) => setDiscipline(event.target.value as Discipline)}>
-              {Object.entries(disciplineLabel).map(([code, label]) => (
+              {disciplines.map((code) => (
                 <option key={code} value={code}>
-                  {label}
+                  {t(`discipline_${code}`)}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            Field
+            {t("field")}
             <select value={raceGender} onChange={(event) => setRaceGender(event.target.value as Gender)}>
-              <option value="W">Women</option>
-              <option value="M">Men</option>
+              <option value="W">{t("gender_W")}</option>
+              <option value="M">{t("gender_M")}</option>
             </select>
           </label>
           <label>
-            Date
+            {t("date")}
             <input type="date" value={raceDate} onChange={(event) => setRaceDate(event.target.value)} required />
           </label>
-          {formError ? <p className="alert">{formError}</p> : null}
+          {formError ? <p className="alert">{t(formError)}</p> : null}
           <button className="primary" type="submit">
-            Add race
+            {t("addRace")}
           </button>
         </form>
       ) : null}
       <p className="fine">
-        Calendar from the{" "}
+        {t("calendarNote")}{" "}
         <a href="https://www.fis-ski.com/DB/alpine-skiing/calendar-results.html?sectorcode=AL&seasoncode=2027&categorycode=WC">
-          FIS alpine World Cup
+          {t("fisWorldCup")}
         </a>
-        . Betting closes at the start of race day, Europe/Zurich.
+        {t("calendarClose")}
       </p>
     </div>
   );

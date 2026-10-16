@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
-import { disciplineLabel, formatRaceDate, genderLabel, lastSeasonFis, rankLabel } from "../format";
+import { formatRaceDate, lastSeasonFis, rankLabel, translateReason } from "../format";
+import { useI18n } from "../i18n";
 import type { Discipline, Gender, RaceDetail, Skier } from "../types";
+
+const disciplines: Discipline[] = ["DH", "SG", "GS", "SL", "AC"];
 
 const emptySlots: (Skier | null)[] = [null, null, null, null, null];
 
@@ -11,9 +14,11 @@ export function RacePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, refresh } = useAuth();
+  const { t, lang } = useI18n();
   const [race, setRace] = useState<RaceDetail | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [noticeName, setNoticeName] = useState("");
   const [slots, setSlots] = useState<(Skier | null)[]>(emptySlots);
   const [sheet, setSheet] = useState<number | null>(null);
   const [query, setQuery] = useState("");
@@ -59,7 +64,7 @@ export function RacePage() {
   }
 
   useEffect(() => {
-    load().catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not load the race"));
+    load().catch((err: unknown) => setError(err instanceof Error ? err.message : "couldNotLoadRace"));
   }, [id]);
 
   const activeSheet = sheet ?? resultSheet;
@@ -103,7 +108,7 @@ export function RacePage() {
       next[index] = { id: pick.skierId, name: pick.name, nation: pick.nation, gender: race.gender };
     });
     setSlots(next);
-    setNotice("Suggestion filled in. Save the bet if you want to keep it.");
+    setNotice("suggestionFilled");
   }
 
   async function saveBet() {
@@ -118,10 +123,10 @@ export function RacePage() {
           picks: slots.map((skier, index) => ({ skierId: skier!.id, position: index + 1 })),
         }),
       });
-      setNotice("Bet saved. You can still change it before race day.");
+      setNotice("betSaved");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save the bet");
+      setError(err instanceof Error ? err.message : "couldNotSaveBet");
     } finally {
       setBusy(false);
     }
@@ -136,10 +141,10 @@ export function RacePage() {
         method: "PUT",
         body: JSON.stringify({ finishes }),
       });
-      setNotice(finishes.length ? "Result saved." : "Result cleared.");
+      setNotice(finishes.length ? "resultSaved" : "resultCleared");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save the result");
+      setError(err instanceof Error ? err.message : "couldNotSaveResult");
     } finally {
       setBusy(false);
     }
@@ -154,10 +159,10 @@ export function RacePage() {
         method: "PATCH",
         body: JSON.stringify({ place, discipline, gender, raceDate }),
       });
-      setNotice("Race updated.");
+      setNotice("raceUpdated");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not update the race");
+      setError(err instanceof Error ? err.message : "couldNotUpdateRace");
     } finally {
       setBusy(false);
     }
@@ -171,7 +176,7 @@ export function RacePage() {
       await refresh();
       navigate("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not delete the race");
+      setError(err instanceof Error ? err.message : "couldNotDeleteRace");
       setBusy(false);
     }
   }
@@ -187,14 +192,15 @@ export function RacePage() {
       setSkiers((current) => [...current, { ...created, rank: null, rankNote: null }]);
       setSkierName("");
       setNation("");
-      setNotice(`${created.name} added to the start list.`);
+      setNoticeName(created.name);
+      setNotice("skierAdded");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add the skier");
+      setError(err instanceof Error ? err.message : "couldNotAddSkier");
     }
   }
 
-  if (error && !race) return <p className="alert">{error}</p>;
-  if (!race) return <p className="muted">Loading race…</p>;
+  if (error && !race) return <p className="alert">{t(error)}</p>;
+  if (!race) return <p className="muted">{t("loadingRace")}</p>;
 
   const resultPrefix = resultSlots.findIndex((slot) => !slot);
   const filledResults =
@@ -205,34 +211,34 @@ export function RacePage() {
   return (
     <div className="stack">
       <Link className="back" to="/">
-        All races
+        {t("allRaces")}
       </Link>
       <div className="card race-head">
-        <p className="eyebrow">{formatRaceDate(race.raceDate)}</p>
+        <p className="eyebrow">{formatRaceDate(race.raceDate, lang)}</p>
         <h2>{race.place}</h2>
         <p className="meta">
-          {disciplineLabel[race.discipline]} · {genderLabel[race.gender]}
+          {t(`discipline_${race.discipline}`)} · {t(`gender_${race.gender}`)}
         </p>
         <p className={race.bettingOpen ? "pill open" : "pill closed"}>
-          {race.bettingOpen ? "Betting open until race day" : "Betting closed"}
+          {race.bettingOpen ? t("bettingOpen") : t("bettingClosed")}
         </p>
-        {race.points != null ? <p className="big-points">{race.points} pts</p> : null}
+        {race.points != null ? <p className="big-points">{t("pointsShort", { points: race.points })}</p> : null}
       </div>
       <div className="links">
         {race.lastYear.map((item) => (
           <a key={item.url} href={item.url} target="_blank" rel="noreferrer">
-            Last year's result · {formatRaceDate(item.raceDate)}
-            {item.winner ? ` · won by ${item.winner}` : ""}
+            {t("lastYearResult")} · {formatRaceDate(item.raceDate, lang)}
+            {item.winner ? ` · ${t("wonBy", { winner: item.winner })}` : ""}
           </a>
         ))}
         <a href={lastSeasonFis} target="_blank" rel="noreferrer">
-          All of last season's races and results on FIS
+          {t("allLastSeason")}
         </a>
       </div>
       {leaders.length > 0 ? (
         <section className="card disc-rank">
-          <h2>{disciplineLabel[race.discipline]} ranking</h2>
-          <p className="muted">This season's results come first. Everyone else follows last season's finishes in this discipline.</p>
+          <h2>{t("disciplineRanking", { discipline: t(`discipline_${race.discipline}`) })}</h2>
+          <p className="muted">{t("disciplineRankHelp")}</p>
           <ol>
             {leaders.map((skier) => (
               <li key={skier.id}>
@@ -240,7 +246,7 @@ export function RacePage() {
                 <span>
                   <strong>{skier.name}</strong>
                   <em>
-                    {skier.nation} · {skier.rankNote}
+                    {skier.nation} · {skier.rankNote === "last season" ? t("lastSeason") : t("thisSeason")}
                   </em>
                 </span>
               </li>
@@ -248,11 +254,11 @@ export function RacePage() {
           </ol>
         </section>
       ) : null}
-      {notice ? <p className="note">{notice}</p> : null}
-      {error ? <p className="alert">{error}</p> : null}
+      {notice ? <p className="note">{t(notice, { name: noticeName })}</p> : null}
+      {error ? <p className="alert">{t(error)}</p> : null}
 
       <section className="stack">
-        <h2>Your first five</h2>
+        <h2>{t("yourFirstFive")}</h2>
         {race.bettingOpen ? (
           <>
             {slots.map((skier, index) => (
@@ -265,21 +271,21 @@ export function RacePage() {
                       <em>{skier.nation}</em>
                     </span>
                   ) : (
-                    <span className="muted">Choose {rankLabel(index + 1)}</span>
+                    <span className="muted">{t("chooseRank", { rank: rankLabel(index + 1, lang) })}</span>
                   )}
                 </button>
                 <div className="slot-actions">
-                  <button type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move up">
+                  <button type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label={t("moveUp")}>
                     ↑
                   </button>
-                  <button type="button" onClick={() => move(index, 1)} disabled={index === 4} aria-label="Move down">
+                  <button type="button" onClick={() => move(index, 1)} disabled={index === 4} aria-label={t("moveDown")}>
                     ↓
                   </button>
                   <button
                     type="button"
                     onClick={() => setSlots((current) => current.map((slot, slotIndex) => (slotIndex === index ? null : slot)))}
                     disabled={!skier}
-                    aria-label="Clear"
+                    aria-label={t("clear")}
                   >
                     ×
                   </button>
@@ -287,11 +293,11 @@ export function RacePage() {
               </div>
             ))}
             <button className="primary" type="button" disabled={busy || slots.some((slot) => !slot)} onClick={saveBet}>
-              {busy ? "Saving…" : "Save bet"}
+              {busy ? t("saving") : t("saveBet")}
             </button>
           </>
         ) : race.picks.length === 0 ? (
-          <p className="card empty">You did not bet on this race.</p>
+          <p className="card empty">{t("noBetOnRace")}</p>
         ) : (
           race.picks.map((pick) => (
             <div className="slot readonly" key={pick.position}>
@@ -300,9 +306,9 @@ export function RacePage() {
                 <strong>{pick.name}</strong>
                 <em>{pick.nation}</em>
                 {race.hasResults ? (
-                  <small>{pick.actual ? `Finished ${rankLabel(pick.actual)}` : "Outside the top 5"}</small>
+                  <small>{pick.actual ? t("finished", { rank: rankLabel(pick.actual, lang) }) : t("outsideTop")}</small>
                 ) : (
-                  <small>Waiting for the result</small>
+                  <small>{t("waitingResult")}</small>
                 )}
               </span>
               {pick.points != null ? <b>{pick.points}</b> : null}
@@ -313,7 +319,7 @@ export function RacePage() {
 
       {race.hasResults ? (
         <section className="stack">
-          <h2>Official top 5</h2>
+          <h2>{t("officialTop")}</h2>
           {race.results.slice(0, 5).map((result) => (
             <div className="slot readonly" key={result.position}>
               <span className="bib">{result.position}</span>
@@ -328,33 +334,33 @@ export function RacePage() {
 
       {user.isAdmin ? (
         <section className="stack admin">
-          <h2>Administrator</h2>
+          <h2>{t("administrator")}</h2>
           {race.suggestion && race.suggestion.length > 0 ? (
             <div className="card suggest">
-              <h3>Suggested top 5</h3>
-              <p className="muted">From last year's finish here and this season's results.</p>
+              <h3>{t("suggestedTop")}</h3>
+              <p className="muted">{t("suggestionHelp")}</p>
               {race.suggestion.map((pick, index) => (
                 <div className="slot readonly" key={pick.skierId}>
                   <span className="bib">{index + 1}</span>
                   <span>
                     <strong>{pick.name}</strong>
                     <em>{pick.nation}</em>
-                    <small>{pick.reason}</small>
+                    <small>{translateReason(pick.reason, lang)}</small>
                   </span>
                 </div>
               ))}
               {race.bettingOpen ? (
                 <button className="primary" type="button" onClick={applySuggestion}>
-                  Use suggestion
+                  {t("useSuggestion")}
                 </button>
               ) : null}
             </div>
           ) : (
-            <p className="muted">No suggestion yet. It appears once last year's result or this season's results can be matched to the start list.</p>
+            <p className="muted">{t("noSuggestion")}</p>
           )}
           <div className="stack">
-            <h3>Official result</h3>
-            <p className="muted">Enter 1st through 5th. Bettors see it once the race day has started.</p>
+            <h3>{t("officialResult")}</h3>
+            <p className="muted">{t("officialResultHelp")}</p>
             {resultSlots.map((skier, index) => (
               <button className="slot-main card" key={index} type="button" onClick={() => setResultSheet(index)}>
                 <span className="bib">{index + 1}</span>
@@ -364,11 +370,11 @@ export function RacePage() {
                     <em>{skier.nation}</em>
                   </span>
                 ) : (
-                  <span className="muted">Set {rankLabel(index + 1)}</span>
+                  <span className="muted">{t("setRank", { rank: rankLabel(index + 1, lang) })}</span>
                 )}
               </button>
             ))}
-            {resultGap ? <p className="alert">Fill the result from 1st without a gap.</p> : null}
+            {resultGap ? <p className="alert">{t("resultGap")}</p> : null}
             <button
               className="primary"
               type="button"
@@ -379,71 +385,69 @@ export function RacePage() {
                 )
               }
             >
-              Save result
+              {t("saveResult")}
             </button>
             <button className="ghost" type="button" disabled={busy} onClick={() => saveResults([])}>
-              Clear result
+              {t("clearResult")}
             </button>
           </div>
           <form className="card form" onSubmit={saveRace}>
-            <h3>Edit race</h3>
+            <h3>{t("editRace")}</h3>
             <label>
-              Place
+              {t("place")}
               <input value={place} onChange={(event) => setPlace(event.target.value)} required />
             </label>
             <label>
-              Discipline
+              {t("discipline")}
               <select value={discipline} onChange={(event) => setDiscipline(event.target.value as Discipline)}>
-                {Object.entries(disciplineLabel).map(([code, label]) => (
+                {disciplines.map((code) => (
                   <option key={code} value={code}>
-                    {label}
+                    {t(`discipline_${code}`)}
                   </option>
                 ))}
               </select>
             </label>
             <label>
-              Field
+              {t("field")}
               <select value={gender} onChange={(event) => setGender(event.target.value as Gender)}>
-                <option value="W">Women</option>
-                <option value="M">Men</option>
+                <option value="W">{t("gender_W")}</option>
+                <option value="M">{t("gender_M")}</option>
               </select>
             </label>
             <label>
-              Date
+              {t("date")}
               <input type="date" value={raceDate} onChange={(event) => setRaceDate(event.target.value)} required />
             </label>
             <button className="primary" type="submit" disabled={busy}>
-              Save race
+              {t("saveRace")}
             </button>
           </form>
           <div className="card form">
-            <h3>Delete race</h3>
+            <h3>{t("deleteRaceTitle")}</h3>
             {confirmingDelete ? (
               <>
-                <p className="alert">
-                  Delete {race.place}? The result and every bet on it go with it. This cannot be undone.
-                </p>
+                <p className="alert">{t("deleteRaceConfirm", { place: race.place })}</p>
                 <button className="danger" type="button" disabled={busy} onClick={() => void removeRace()}>
-                  {busy ? "Deleting…" : "Delete race"}
+                  {busy ? t("deleting") : t("deleteRace")}
                 </button>
                 <button className="ghost" type="button" disabled={busy} onClick={() => setConfirmingDelete(false)}>
-                  Cancel
+                  {t("cancel")}
                 </button>
               </>
             ) : (
               <button className="danger" type="button" onClick={() => setConfirmingDelete(true)}>
-                Delete race
+                {t("deleteRace")}
               </button>
             )}
           </div>
           <form className="card form" onSubmit={addSkier}>
-            <h3>Add a skier</h3>
+            <h3>{t("addSkier")}</h3>
             <label>
-              Name
+              {t("name")}
               <input value={skierName} onChange={(event) => setSkierName(event.target.value)} required />
             </label>
             <label>
-              Nation
+              {t("nation")}
               <input
                 value={nation}
                 onChange={(event) => setNation(event.target.value.toUpperCase())}
@@ -453,7 +457,7 @@ export function RacePage() {
               />
             </label>
             <button className="primary" type="submit">
-              Add to {genderLabel[race.gender]}
+              {t("addTo", { gender: t(`gender_${race.gender}`) })}
             </button>
           </form>
         </section>
@@ -465,11 +469,11 @@ export function RacePage() {
             className="sheet"
             role="dialog"
             aria-modal="true"
-            aria-label={`Choose ${rankLabel(activeSheet + 1)}`}
+            aria-label={t("chooseRank", { rank: rankLabel(activeSheet + 1, lang) })}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="sheet-head">
-              <h2>Choose {rankLabel(activeSheet + 1)}</h2>
+              <h2>{t("chooseRank", { rank: rankLabel(activeSheet + 1, lang) })}</h2>
               <button
                 type="button"
                 onClick={() => {
@@ -478,16 +482,16 @@ export function RacePage() {
                   setQuery("");
                 }}
               >
-                Close
+                {t("close")}
               </button>
             </div>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search name or nation"
+              placeholder={t("searchSkier")}
               autoFocus
             />
-            <p className="muted">Listed by this discipline. Search to find anyone else.</p>
+            <p className="muted">{t("sheetHelp")}</p>
             <ul className="skier-list">
               {filtered.slice(0, 40).map((skier) => (
                 <li key={skier.id}>
@@ -497,7 +501,7 @@ export function RacePage() {
                       <strong>{skier.name}</strong>
                       <em>
                         {skier.nation}
-                        {skier.rankNote ? ` · ${skier.rankNote}` : ""}
+                        {skier.rankNote ? ` · ${skier.rankNote === "last season" ? t("lastSeason") : t("thisSeason")}` : ""}
                       </em>
                     </span>
                   </button>

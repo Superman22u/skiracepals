@@ -1,30 +1,17 @@
-import type { Discipline, Gender } from "./types";
-
-export const disciplineLabel: Record<Discipline, string> = {
-  DH: "Downhill",
-  SG: "Super-G",
-  GS: "Giant slalom",
-  SL: "Slalom",
-  AC: "Alpine combined",
-};
-
-export const genderLabel: Record<Gender, string> = {
-  W: "Women",
-  M: "Men",
-};
+import { translate, type Lang } from "./i18n";
 
 export const lastSeasonFis =
   "https://www.fis-ski.com/DB/alpine-skiing/calendar-results.html?sectorcode=AL&seasoncode=2026&categorycode=WC";
 
-const ranks = ["1st", "2nd", "3rd", "4th", "5th"];
-
-export function rankLabel(position: number): string {
+export function rankLabel(position: number, lang: Lang): string {
+  if (lang === "de") return `${position}.`;
+  const ranks = ["1st", "2nd", "3rd", "4th", "5th"];
   return ranks[position - 1] ?? String(position);
 }
 
-export function formatRaceDate(iso: string): string {
+export function formatRaceDate(iso: string, lang: Lang): string {
   const [year, month, day] = iso.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat(lang === "de" ? "de-DE" : "en-GB", {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -33,11 +20,42 @@ export function formatRaceDate(iso: string): string {
   }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
-export function monthLabel(iso: string): string {
+export function monthLabel(iso: string, lang: Lang): string {
   const [year, month] = iso.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat(lang === "de" ? "de-DE" : "en-GB", {
     month: "long",
     year: "numeric",
     timeZone: "UTC",
   }).format(new Date(Date.UTC(year, month - 1, 1)));
+}
+
+const reasonDiscipline: Record<string, string> = {
+  downhill: "discipline_DH",
+  "super-G": "discipline_SG",
+  "giant slalom": "discipline_GS",
+  slalom: "discipline_SL",
+  "alpine combined": "discipline_AC",
+};
+
+export function translateReason(reason: string, lang: Lang): string {
+  return reason
+    .split(" · ")
+    .map((part) => {
+      let match = part.match(/^(\d+)(?:st|nd|rd|th) here last year$/);
+      if (match) return translate(lang, "reasonVenue", { rank: rankLabel(Number(match[1]), lang) });
+      match = part.match(/^leading (.+) this season$/);
+      if (match && reasonDiscipline[match[1]]) {
+        return translate(lang, "reasonLeading", { discipline: translate(lang, reasonDiscipline[match[1]]) });
+      }
+      match = part.match(/^(\d+)(?:st|nd|rd|th) in (.+) this season$/);
+      if (match && reasonDiscipline[match[2]]) {
+        return translate(lang, "reasonPlace", {
+          rank: rankLabel(Number(match[1]), lang),
+          discipline: translate(lang, reasonDiscipline[match[2]]),
+        });
+      }
+      if (part === "scoring in other disciplines this season") return translate(lang, "reasonOther");
+      return part;
+    })
+    .join(" · ");
 }

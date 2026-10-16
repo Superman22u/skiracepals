@@ -2,38 +2,38 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
-import { disciplineLabel, formatRaceDate, genderLabel } from "../format";
+import { formatRaceDate } from "../format";
+import { useI18n } from "../i18n";
 import type { RankingResponse } from "../types";
 
 export function RankingPage() {
   const { user } = useAuth();
+  const { t, lang } = useI18n();
   const [board, setBoard] = useState<RankingResponse | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     api<RankingResponse>("/api/ranking")
       .then(setBoard)
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not load the ranking"));
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : "couldNotLoadRanking"));
   }, []);
 
-  if (error) return <p className="alert">{error}</p>;
-  if (!board) return <p className="muted">Loading ranking…</p>;
+  if (error) return <p className="alert">{t(error)}</p>;
+  if (!board) return <p className="muted">{t("loadingRanking")}</p>;
 
   return (
     <div className="stack">
-      <p className="rule">
-        Only pals who placed a bet are listed. A top-5 skier is 1 point. The correct rank is 3. A perfect race is 15.
-      </p>
+      <p className="rule">{t("ruleRanking")}</p>
       {board.rows.length === 0 ? (
-        <p className="card empty">Nobody has placed a bet yet.</p>
+        <p className="card empty">{t("nobodyBet")}</p>
       ) : (
         <table className="ranking">
-          <caption>Season ranking</caption>
+          <caption>{t("seasonRanking")}</caption>
           <thead>
             <tr>
-              <th>Rank</th>
-              <th>Nickname</th>
-              <th>Points</th>
+              <th>{t("rank")}</th>
+              <th>{t("nickname")}</th>
+              <th>{t("points")}</th>
             </tr>
           </thead>
           <tbody>
@@ -42,9 +42,7 @@ export function RankingPage() {
                 <td>{row.rank}</td>
                 <td>
                   {row.nickname}
-                  <span>
-                    {row.exact} exact · {row.topFive} in the top 5
-                  </span>
+                  <span>{t("exactLine", { exact: row.exact, top: row.topFive })}</span>
                 </td>
                 <td>{row.points}</td>
               </tr>
@@ -54,16 +52,16 @@ export function RankingPage() {
       )}
       {board.myRaces.length > 0 ? (
         <section className="stack">
-          <h2>Your races</h2>
+          <h2>{t("yourRaces")}</h2>
           {board.myRaces.map((race) => (
             <Link key={race.raceId} className="card race" to={`/races/${race.raceId}`}>
               <div>
                 <p className="place">{race.place}</p>
                 <p className="meta">
-                  {disciplineLabel[race.discipline]} · {genderLabel[race.gender]} · {formatRaceDate(race.raceDate)}
+                  {t(`discipline_${race.discipline}`)} · {t(`gender_${race.gender}`)} · {formatRaceDate(race.raceDate, lang)}
                 </p>
               </div>
-              <strong>{race.pending ? "Pending" : `${race.points} pts`}</strong>
+              <strong>{race.pending ? t("pending") : t("pointsShort", { points: race.points })}</strong>
             </Link>
           ))}
         </section>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { api } from "./api";
 import { AuthContext } from "./auth";
+import { useI18n } from "./i18n";
 import { Shell } from "./Shell";
 import { AccountPage } from "./pages/AccountPage";
 import { ForgotPage, LoginPage, RegisterPage } from "./pages/AuthPages";
@@ -11,6 +12,7 @@ import { RankingPage } from "./pages/RankingPage";
 import type { User } from "./types";
 
 export function App() {
+  const { t } = useI18n();
   const [user, setUser] = useState<User | null | undefined>(undefined);
 
   const refresh = useCallback(async () => {
@@ -25,7 +27,7 @@ export function App() {
   }, []);
 
   if (user === undefined) {
-    return <p className="boot">Loading…</p>;
+    return <p className="boot">{t("loading")}</p>;
   }
 
   return (

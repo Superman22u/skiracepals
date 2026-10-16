@@ -84,7 +84,30 @@ a { color: inherit; }
 .topbar-row, .race, .slot, .slot-main, .profile { display: flex; align-items: center; }
 .topbar-row { justify-content: space-between; gap: 12px; }
 .who-row { margin-top: 8px; }
+.who-actions { display: flex; align-items: center; gap: 8px; }
 .who { margin: 0; color: rgba(255, 255, 255, 0.72); }
+.lang { display: flex; gap: 6px; }
+.lang button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  padding: 3px 8px 3px 3px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.lang button.on { background: white; color: var(--deep); border-color: white; }
+.lang.light button {
+  color: var(--deep);
+  background: white;
+  border-color: var(--line);
+}
+.lang.light button.on { background: var(--deep); color: white; border-color: var(--deep); }
+.flag { width: 22px; height: 15px; border-radius: 2px; display: block; }
+.gate-tools { display: flex; justify-content: flex-end; margin-bottom: 8px; }
 .logout {
   background: transparent;
   color: white;

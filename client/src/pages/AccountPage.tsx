@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
+import { useI18n } from "../i18n";
 
 type Pal = {
   id: number;
@@ -13,6 +14,7 @@ type Pal = {
 
 export function AccountPage() {
   const { user, setUser } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -44,24 +46,24 @@ export function AccountPage() {
       });
       setCurrentPassword("");
       setNewPassword("");
-      setNotice("Password updated.");
+      setNotice("passwordUpdated");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not change the password");
+      setError(err instanceof Error ? err.message : "couldNotChangePassword");
     }
   }
 
   return (
     <div className="stack">
       <section className="card profile">
-        <p className="eyebrow">{user.isAdmin ? "Administrator" : "Pals account"}</p>
+        <p className="eyebrow">{user.isAdmin ? t("administrator") : t("palsAccount")}</p>
         <h2>{user.nickname}</h2>
         <p>{user.name}</p>
         <p className="meta">{user.email}</p>
       </section>
       <form className="card form" onSubmit={changePassword}>
-        <h2>Change password</h2>
+        <h2>{t("changePassword")}</h2>
         <label>
-          Current password
+          {t("currentPassword")}
           <input
             type="password"
             value={currentPassword}
@@ -71,7 +73,7 @@ export function AccountPage() {
           />
         </label>
         <label>
-          New password
+          {t("newPassword")}
           <input
             type="password"
             value={newPassword}
@@ -81,17 +83,17 @@ export function AccountPage() {
             required
           />
         </label>
-        {error ? <p className="alert">{error}</p> : null}
-        {notice ? <p className="note">{notice}</p> : null}
+        {error ? <p className="alert">{t(error)}</p> : null}
+        {notice ? <p className="note">{t(notice)}</p> : null}
         <button className="primary" type="submit">
-          Update password
+          {t("updatePassword")}
         </button>
       </form>
       {user.isAdmin ? (
         <section className="stack">
-          <h2>Reset a password</h2>
-          <p className="muted">When someone forgets their password, set a new one here and tell them what it is.</p>
-          {pals.length === 0 ? <p className="card empty">No other accounts yet.</p> : null}
+          <h2>{t("resetAPassword")}</h2>
+          <p className="muted">{t("resetHelp")}</p>
+          {pals.length === 0 ? <p className="card empty">{t("noOtherAccounts")}</p> : null}
           {pals.map((pal) => (
             <PalReset
               key={pal.id}
@@ -107,7 +109,7 @@ export function AccountPage() {
       {user.isAdmin ? <RemoveSkiers /> : null}
       <DeleteOwnAccount nickname={user.nickname} onDeleted={() => { setUser(null); navigate("/login"); }} />
       <button className="ghost" type="button" onClick={logout}>
-        Log out
+        {t("logout")}
       </button>
     </div>
   );
@@ -122,6 +124,7 @@ function PalReset({
   onReset: (id: number) => void;
   onDelete: (id: number) => void;
 }) {
+  const { t } = useI18n();
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -140,10 +143,10 @@ function PalReset({
         body: JSON.stringify({ newPassword: password }),
       });
       setPassword("");
-      setNotice(`New password saved for ${pal.nickname}.`);
+      setNotice("passwordSavedFor");
       onReset(pal.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not set the password");
+      setError(err instanceof Error ? err.message : "couldNotSetPassword");
     } finally {
       setBusy(false);
     }
@@ -156,7 +159,7 @@ function PalReset({
       await api(`/api/auth/pals/${pal.id}`, { method: "DELETE" });
       onDelete(pal.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not delete the account");
+      setError(err instanceof Error ? err.message : "couldNotDeleteAccount");
       setDeleting(false);
     }
   }
@@ -165,13 +168,13 @@ function PalReset({
     <form className="card pal" onSubmit={submit}>
       <div className="pal-head">
         <strong>{pal.nickname}</strong>
-        {pal.resetRequested ? <p className="asked">Asked for a reset</p> : null}
+        {pal.resetRequested ? <p className="asked">{t("askedReset")}</p> : null}
       </div>
       <p className="meta">
         {pal.name} · {pal.email}
       </p>
       <label>
-        New password
+        {t("newPassword")}
         <input
           type="password"
           value={password}
@@ -181,24 +184,24 @@ function PalReset({
           required
         />
       </label>
-      {error ? <p className="alert">{error}</p> : null}
-      {notice ? <p className="note">{notice}</p> : null}
+      {error ? <p className="alert">{t(error)}</p> : null}
+      {notice ? <p className="note">{t(notice, { nickname: pal.nickname })}</p> : null}
       <button className="primary" type="submit" disabled={busy}>
-        {busy ? "Saving…" : "Set password"}
+        {busy ? t("saving") : t("setPassword")}
       </button>
       {confirming ? (
         <>
-          <p className="alert">Delete {pal.nickname} and every bet on that account? This cannot be undone.</p>
+          <p className="alert">{t("deleteAccountConfirm", { nickname: pal.nickname })}</p>
           <button className="danger" type="button" disabled={deleting} onClick={() => void remove()}>
-            {deleting ? "Deleting…" : "Delete account"}
+            {deleting ? t("deleting") : t("deleteAccount")}
           </button>
           <button className="ghost" type="button" onClick={() => setConfirming(false)}>
-            Cancel
+            {t("cancel")}
           </button>
         </>
       ) : (
         <button className="danger" type="button" onClick={() => setConfirming(true)}>
-          Delete account
+          {t("deleteAccount")}
         </button>
       )}
     </form>
@@ -208,11 +211,13 @@ function PalReset({
 type ListedSkier = { id: number; name: string; nation: string; gender: "W" | "M" };
 
 function RemoveSkiers() {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [found, setFound] = useState<ListedSkier[]>([]);
   const [pending, setPending] = useState<ListedSkier | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [removedName, setRemovedName] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -236,9 +241,10 @@ function RemoveSkiers() {
       await api(`/api/admin/skiers/${skier.id}`, { method: "DELETE" });
       setFound((current) => current.filter((item) => item.id !== skier.id));
       setPending(null);
-      setNotice(`${skier.name} is off the start lists. Past bets still show the name.`);
+      setRemovedName(skier.name);
+      setNotice("skierRemoved");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not remove the skier");
+      setError(err instanceof Error ? err.message : "couldNotRemoveSkier");
     } finally {
       setBusy(false);
     }
@@ -246,32 +252,30 @@ function RemoveSkiers() {
 
   return (
     <section className="card form">
-      <h2>Remove a skier</h2>
-      <p className="muted">
-        Take someone off the lists when they no longer compete. Adding the same name on a race puts them back.
-      </p>
+      <h2>{t("removeSkier")}</h2>
+      <p className="muted">{t("removeSkierHelp")}</p>
       <label>
-        Search
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name" />
+        {t("search")}
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("namePlaceholder")} />
       </label>
-      {error ? <p className="alert">{error}</p> : null}
-      {notice ? <p className="note">{notice}</p> : null}
+      {error ? <p className="alert">{t(error)}</p> : null}
+      {notice ? <p className="note">{t(notice, { name: removedName })}</p> : null}
       <ul className="skier-admin">
         {found.map((skier) => (
           <li key={skier.id}>
             <span>
               <strong>{skier.name}</strong>
               <em>
-                {skier.nation} · {skier.gender === "W" ? "Women" : "Men"}
+                {skier.nation} · {skier.gender === "W" ? t("gender_W") : t("gender_M")}
               </em>
             </span>
             {pending?.id === skier.id ? (
               <button className="danger" type="button" disabled={busy} onClick={() => void remove(skier)}>
-                {busy ? "Removing…" : "Remove now"}
+                {busy ? t("removing") : t("removeNow")}
               </button>
             ) : (
               <button className="ghost" type="button" onClick={() => setPending(skier)}>
-                Remove
+                {t("remove")}
               </button>
             )}
           </li>
@@ -282,6 +286,7 @@ function RemoveSkiers() {
 }
 
 function DeleteOwnAccount({ nickname, onDeleted }: { nickname: string; onDeleted: () => void }) {
+  const { t } = useI18n();
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -293,29 +298,29 @@ function DeleteOwnAccount({ nickname, onDeleted }: { nickname: string; onDeleted
       await api("/api/auth/me", { method: "DELETE" });
       onDeleted();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not delete the account");
+      setError(err instanceof Error ? err.message : "couldNotDeleteAccount");
       setBusy(false);
     }
   }
 
   return (
     <section className="card form">
-      <h2>Delete my account</h2>
-      <p className="muted">This removes the account {nickname} and every bet on it.</p>
-      {error ? <p className="alert">{error}</p> : null}
+      <h2>{t("deleteMyAccount")}</h2>
+      <p className="muted">{t("deleteMyAccountHelp", { nickname })}</p>
+      {error ? <p className="alert">{t(error)}</p> : null}
       {confirming ? (
         <>
-          <p className="alert">This cannot be undone.</p>
+          <p className="alert">{t("cannotUndo")}</p>
           <button className="danger" type="button" disabled={busy} onClick={() => void remove()}>
-            {busy ? "Deleting…" : "Delete my account now"}
+            {busy ? t("deleting") : t("deleteMyAccountNow")}
           </button>
           <button className="ghost" type="button" onClick={() => setConfirming(false)}>
-            Keep my account
+            {t("keepAccount")}
           </button>
         </>
       ) : (
         <button className="danger" type="button" onClick={() => setConfirming(true)}>
-          Delete my account
+          {t("deleteMyAccount")}
         </button>
       )}
     </section>

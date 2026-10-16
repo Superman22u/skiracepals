@@ -3,8 +3,11 @@ import { Link } from "react-router-dom";
 import { api } from "../api";
 import type { User } from "../types";
 import { WinterMark } from "../WinterMark";
+import { LangSwitch } from "../LangSwitch";
+import { useI18n } from "../i18n";
 
 export function LoginPage({ onUser }: { onUser: (user: User) => void }) {
+  const { t } = useI18n();
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -17,7 +20,7 @@ export function LoginPage({ onUser }: { onUser: (user: User) => void }) {
     try {
       onUser(await api<User>("/api/auth/login", { method: "POST", body: JSON.stringify({ login, password }) }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not log in");
+      setError(err instanceof Error ? err.message : "couldNotLogin");
     } finally {
       setBusy(false);
     }
@@ -30,19 +33,22 @@ export function LoginPage({ onUser }: { onUser: (user: User) => void }) {
         <span>❄</span>
         <span>❄</span>
       </div>
-      <p className="eyebrow">Alpine World Cup 2026/27</p>
+      <div className="gate-tools">
+        <LangSwitch tone="light" />
+      </div>
+      <p className="eyebrow">{t("season")}</p>
       <h1>
         <WinterMark />
-        Ski Race Pals
+        {t("appName")}
       </h1>
-      <p className="lede">Pick the first five. Women and men are separate races.</p>
+      <p className="lede">{t("loginLede")}</p>
       <form className="card form" onSubmit={submit}>
         <label>
-          Email or nickname
+          {t("emailOrNickname")}
           <input value={login} onChange={(event) => setLogin(event.target.value)} autoComplete="username" required />
         </label>
         <label>
-          Password
+          {t("password")}
           <input
             type="password"
             value={password}
@@ -51,22 +57,23 @@ export function LoginPage({ onUser }: { onUser: (user: User) => void }) {
             required
           />
         </label>
-        {error ? <p className="alert">{error}</p> : null}
+        {error ? <p className="alert">{t(error)}</p> : null}
         <button className="primary" disabled={busy} type="submit">
-          {busy ? "Logging in…" : "Log in"}
+          {busy ? t("loggingIn") : t("login")}
         </button>
       </form>
       <p className="switch">
-        <Link to="/forgot">Forgot your password?</Link>
+        <Link to="/forgot">{t("forgotPassword")}</Link>
       </p>
       <p className="switch">
-        New here? <Link to="/register">Create an account</Link>
+        {t("newHere")} <Link to="/register">{t("createAccount")}</Link>
       </p>
     </div>
   );
 }
 
 export function RegisterPage({ onUser }: { onUser: (user: User) => void }) {
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [nickname, setNickname] = useState("");
@@ -86,7 +93,7 @@ export function RegisterPage({ onUser }: { onUser: (user: User) => void }) {
         }),
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not register");
+      setError(err instanceof Error ? err.message : "couldNotRegister");
     } finally {
       setBusy(false);
     }
@@ -94,16 +101,19 @@ export function RegisterPage({ onUser }: { onUser: (user: User) => void }) {
 
   return (
     <div className="gate">
-      <p className="eyebrow">Join the pals</p>
-      <h1>Create your account</h1>
-      <p className="lede">Your nickname is what everyone sees on the ranking. Each email and each nickname can only be used once.</p>
+      <div className="gate-tools">
+        <LangSwitch tone="light" />
+      </div>
+      <p className="eyebrow">{t("join")}</p>
+      <h1>{t("createYourAccount")}</h1>
+      <p className="lede">{t("registerLede")}</p>
       <form className="card form" onSubmit={submit}>
         <label>
-          Name
+          {t("name")}
           <input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" required />
         </label>
         <label>
-          Email
+          {t("email")}
           <input
             type="email"
             value={email}
@@ -113,7 +123,7 @@ export function RegisterPage({ onUser }: { onUser: (user: User) => void }) {
           />
         </label>
         <label>
-          Nickname
+          {t("nickname")}
           <input
             value={nickname}
             onChange={(event) => setNickname(event.target.value)}
@@ -124,7 +134,7 @@ export function RegisterPage({ onUser }: { onUser: (user: User) => void }) {
           />
         </label>
         <label>
-          Password
+          {t("password")}
           <input
             type="password"
             value={password}
@@ -134,19 +144,20 @@ export function RegisterPage({ onUser }: { onUser: (user: User) => void }) {
             required
           />
         </label>
-        {error ? <p className="alert">{error}</p> : null}
+        {error ? <p className="alert">{t(error)}</p> : null}
         <button className="primary" disabled={busy} type="submit">
-          {busy ? "Creating…" : "Create account"}
+          {busy ? t("creating") : t("createAccount")}
         </button>
       </form>
       <p className="switch">
-        Already registered? <Link to="/login">Log in</Link>
+        {t("alreadyRegistered")} <Link to="/login">{t("login")}</Link>
       </p>
     </div>
   );
 }
 
 export function ForgotPage() {
+  const { t } = useI18n();
   const [nickname, setNickname] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -164,7 +175,7 @@ export function ForgotPage() {
       });
       setNotice(result.message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not request a reset");
+      setError(err instanceof Error ? err.message : "couldNotReset");
     } finally {
       setBusy(false);
     }
@@ -172,14 +183,15 @@ export function ForgotPage() {
 
   return (
     <div className="gate">
-      <p className="eyebrow">Alpine World Cup 2026/27</p>
-      <h1>Reset password</h1>
-      <p className="lede">
-        Enter your nickname. The administrator can then choose a new password and tell you what it is.
-      </p>
+      <div className="gate-tools">
+        <LangSwitch tone="light" />
+      </div>
+      <p className="eyebrow">{t("season")}</p>
+      <h1>{t("resetPassword")}</h1>
+      <p className="lede">{t("forgotLede")}</p>
       <form className="card form" onSubmit={submit}>
         <label>
-          Nickname
+          {t("nickname")}
           <input
             value={nickname}
             onChange={(event) => setNickname(event.target.value)}
@@ -187,14 +199,14 @@ export function ForgotPage() {
             required
           />
         </label>
-        {error ? <p className="alert">{error}</p> : null}
-        {notice ? <p className="note">{notice}</p> : null}
+        {error ? <p className="alert">{t(error)}</p> : null}
+        {notice ? <p className="note">{t(notice)}</p> : null}
         <button className="primary" disabled={busy} type="submit">
-          {busy ? "Sending…" : "Ask for a reset"}
+          {busy ? t("sending") : t("askReset")}
         </button>
       </form>
       <p className="switch">
-        <Link to="/login">Back to log in</Link>
+        <Link to="/login">{t("backToLogin")}</Link>
       </p>
     </div>
   );
