@@ -68,6 +68,9 @@ export function LoginPage({ onUser }: { onUser: (user: User) => void }) {
       <p className="switch">
         {t("newHere")} <Link to="/register">{t("createAccount")}</Link>
       </p>
+      <p className="switch">
+        <Link to="/about">{t("about")}</Link>
+      </p>
     </div>
   );
 }

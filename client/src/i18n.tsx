@@ -7,6 +7,16 @@ const en = {
   loading: "Loading…",
   season: "Alpine World Cup 2026/27",
   appName: "Ski Race Pals",
+  about: "About",
+  aboutTitle: "About",
+  aboutMade: "Made by Rene.",
+  aboutBody:
+    "Ski Race Pals is a private pool for the alpine World Cup. You pick the first five in each race. Women and men are separate. A skier in your five who finishes in the top five scores 1 point. The correct rank scores 3.",
+  aboutCopyright: "© 2026 Rene",
+  aboutLicense: "Licensed under the Apache License 2.0.",
+  aboutFis:
+    "Race places, skier names, and results are published by the International Ski Federation (FIS). Ski Race Pals is not affiliated with FIS.",
+  aboutBack: "Back",
   pts: "pts",
   logout: "Log out",
   navRaces: "Races",
@@ -179,6 +189,16 @@ const de: { [K in keyof typeof en]: string } = {
   loading: "Wird geladen…",
   season: "Alpiner Weltcup 2026/27",
   appName: "Ski Race Pals",
+  about: "Info",
+  aboutTitle: "Info",
+  aboutMade: "Gemacht von Rene.",
+  aboutBody:
+    "Ski Race Pals ist ein privater Tippwettbewerb zum alpinen Weltcup. Du tippst die ersten fünf jedes Rennens. Frauen und Männer sind getrennt. Ein Starter aus deinen fünf, der in den Top 5 landet, gibt 1 Punkt. Der richtige Rang gibt 3.",
+  aboutCopyright: "© 2026 Rene",
+  aboutLicense: "Lizenziert unter der Apache License 2.0.",
+  aboutFis:
+    "Orte, Namen der Starter und Ergebnisse stammen von der Internationalen Ski-Föderation (FIS). Ski Race Pals ist nicht mit der FIS verbunden.",
+  aboutBack: "Zurück",
   pts: "Pkt.",
   logout: "Abmelden",
   navRaces: "Rennen",

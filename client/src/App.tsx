@@ -4,6 +4,7 @@ import { api } from "./api";
 import { AuthContext } from "./auth";
 import { useI18n } from "./i18n";
 import { Shell } from "./Shell";
+import { AboutPage } from "./pages/AboutPage";
 import { AccountPage } from "./pages/AccountPage";
 import { ForgotPage, LoginPage, RegisterPage } from "./pages/AuthPages";
 import { RacePage } from "./pages/RacePage";
@@ -36,6 +37,7 @@ export function App() {
         <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage onUser={setUser} />} />
         <Route path="/register" element={user ? <Navigate to="/" replace /> : <RegisterPage onUser={setUser} />} />
         <Route path="/forgot" element={user ? <Navigate to="/" replace /> : <ForgotPage />} />
+        <Route path="/about" element={<AboutPage signedIn={Boolean(user)} />} />
         <Route element={user ? <Shell /> : <Navigate to="/login" replace />}>
           <Route path="/" element={<RacesPage />} />
           <Route path="/races/:id" element={<RacePage />} />

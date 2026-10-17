@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
 import { useI18n } from "../i18n";
@@ -108,6 +108,9 @@ export function AccountPage() {
       ) : null}
       {user.isAdmin ? <RemoveSkiers /> : null}
       <DeleteOwnAccount nickname={user.nickname} onDeleted={() => { setUser(null); navigate("/login"); }} />
+      <p className="switch">
+        <Link to="/about">{t("about")}</Link>
+      </p>
       <button className="ghost" type="button" onClick={logout}>
         {t("logout")}
       </button>
