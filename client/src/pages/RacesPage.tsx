@@ -4,6 +4,7 @@ import { api } from "../api";
 import { useAuth } from "../auth";
 import { formatRaceDate, lastSeasonFis, monthLabel } from "../format";
 import { useI18n } from "../i18n";
+import { MailPanel } from "./MailPanel";
 import type { Discipline, Gender, RaceSummary } from "../types";
 
 const disciplines: Discipline[] = ["DH", "SG", "GS", "SL", "AC"];
@@ -71,6 +72,7 @@ export function RacesPage() {
   return (
     <div className="stack">
       <p className="rule">{t("ruleRaces")}</p>
+      {user.isAdmin ? <MailPanel variant="races" /> : null}
       <div className="filters">
         {(["all", "W", "M"] as const).map((value) => (
           <button key={value} className={gender === value ? "chip on" : "chip"} onClick={() => setGender(value)} type="button">

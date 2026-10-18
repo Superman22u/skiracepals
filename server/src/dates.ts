@@ -13,3 +13,15 @@ export function zurichToday(now = new Date()): string {
 export function isBettingOpen(raceDate: string, today = zurichToday()): boolean {
   return raceDate > today;
 }
+
+export function addCalendarDays(iso: string, days: number): string {
+  const [year, month, day] = iso.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+/** The day before a race, and the day before that. Race day itself is already closed. */
+export function isReminderWindow(raceDate: string, today = zurichToday()): boolean {
+  return raceDate > today && raceDate <= addCalendarDays(today, 2);
+}

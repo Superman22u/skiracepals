@@ -233,6 +233,10 @@ router.delete(
   requireUser,
   asyncRoute(async (req, res) => {
     const user = (req as AuthedRequest).user;
+    if (user.isAdmin) {
+      res.status(403).json({ error: "The administrator account cannot be deleted" });
+      return;
+    }
     await deleteUserData(user.id);
     clearAuthCookie(res);
     res.status(204).end();
@@ -247,6 +251,14 @@ router.delete(
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0 || id === (req as AuthedRequest).user.id) {
       res.status(400).json({ error: "Unknown account" });
+      return;
+    }
+    const target = await query<RowDataPacket & { nickname: string }>(
+      "SELECT nickname FROM users WHERE id = ?",
+      [id],
+    );
+    if (target[0]?.nickname.toLowerCase() === "ren") {
+      res.status(403).json({ error: "The administrator account cannot be deleted" });
       return;
     }
     if (!(await deleteUserData(id))) {

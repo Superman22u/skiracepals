@@ -176,7 +176,11 @@ input, select {
   padding: 14px 16px;
   font-weight: 700;
 }
-.primary { background: var(--red); color: white; }
+a.primary {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
 .primary:disabled { opacity: 0.45; }
 .ghost { background: transparent; color: var(--deep); border: 1px solid var(--line); }
 .danger {

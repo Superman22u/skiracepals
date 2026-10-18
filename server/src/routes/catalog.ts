@@ -3,7 +3,7 @@ import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { z } from "zod";
 import type { AuthedRequest } from "../auth";
 import { requireAdmin, requireUser } from "../auth";
-import { isBettingOpen } from "../dates";
+import { addCalendarDays, isBettingOpen, zurichToday } from "../dates";
 import { rankField } from "../discipline-rank";
 import { pool, query, withTx } from "../db";
 import { asyncRoute, isDuplicate, readBody } from "../http";
@@ -338,6 +338,55 @@ router.get(
     res.json({
       rows: board.rows,
       myRaces: myRaceScores(board.picks, user.id),
+    });
+  }),
+);
+
+router.get(
+  "/admin/mail",
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    const today = zurichToday();
+    const until = addCalendarDays(today, 2);
+    const adminId = (req as AuthedRequest).user.id;
+    const users = await query<RowDataPacket & { id: number; nickname: string; email: string }>(
+      `SELECT id, nickname, email FROM users
+       WHERE id <> ? AND TRIM(email) <> ''
+       ORDER BY nickname`,
+      [adminId],
+    );
+    const races = await query<RowDataPacket & { id: number; place: string; discipline: string; gender: "W" | "M"; raceDate: string }>(
+      `SELECT id, place, discipline, gender, race_date AS raceDate
+       FROM races
+       WHERE race_date > ? AND race_date <= ?
+       ORDER BY race_date, gender, FIELD(discipline, 'DH', 'SG', 'GS', 'SL', 'AC'), id`,
+      [today, until],
+    );
+    const raceIds = races.map((race) => Number(race.id));
+    const bets = raceIds.length
+      ? await query<RowDataPacket & { userId: number; raceId: number }>(
+          `SELECT user_id AS userId, race_id AS raceId FROM bets WHERE race_id IN (${raceIds.map(() => "?").join(",")})`,
+          raceIds,
+        )
+      : [];
+    const betted = new Set(bets.map((bet) => `${Number(bet.userId)}:${Number(bet.raceId)}`));
+    const people = users.map((user) => ({
+      id: Number(user.id),
+      nickname: user.nickname,
+      email: user.email,
+    }));
+    res.json({
+      participants: people.map(({ nickname, email }) => ({ nickname, email })),
+      upcoming: races.map((race) => ({
+        id: Number(race.id),
+        place: race.place,
+        discipline: race.discipline,
+        gender: race.gender,
+        raceDate: String(race.raceDate).slice(0, 10),
+        missing: people
+          .filter((person) => !betted.has(`${person.id}:${Number(race.id)}`))
+          .map(({ nickname, email }) => ({ nickname, email })),
+      })),
     });
   }),
 );

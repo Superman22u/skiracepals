@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
 import { useI18n } from "../i18n";
+import { MailPanel } from "./MailPanel";
 
 type Pal = {
   id: number;
@@ -60,6 +61,7 @@ export function AccountPage() {
         <p>{user.name}</p>
         <p className="meta">{user.email}</p>
       </section>
+      {user.isAdmin ? <MailPanel /> : null}
       <form className="card form" onSubmit={changePassword}>
         <h2>{t("changePassword")}</h2>
         <label>
@@ -107,7 +109,9 @@ export function AccountPage() {
         </section>
       ) : null}
       {user.isAdmin ? <RemoveSkiers /> : null}
-      <DeleteOwnAccount nickname={user.nickname} onDeleted={() => { setUser(null); navigate("/login"); }} />
+      {!user.isAdmin ? (
+        <DeleteOwnAccount nickname={user.nickname} onDeleted={() => { setUser(null); navigate("/login"); }} />
+      ) : null}
       <p className="switch">
         <Link to="/about">{t("about")}</Link>
       </p>
