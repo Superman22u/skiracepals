@@ -5,6 +5,7 @@ import type { User } from "../types";
 import { WinterMark } from "../WinterMark";
 import { LangSwitch } from "../LangSwitch";
 import { useI18n } from "../i18n";
+import { NewsPanel } from "./NewsPanel";
 
 export function LoginPage({ onUser }: { onUser: (user: User) => void }) {
   const { t } = useI18n();
@@ -42,6 +43,8 @@ export function LoginPage({ onUser }: { onUser: (user: User) => void }) {
         {t("appName")}
       </h1>
       <p className="lede">{t("loginLede")}</p>
+      <p className="lede">{t("welcomeNote")}</p>
+      <NewsPanel />
       <form className="card form" onSubmit={submit}>
         <label>
           {t("emailOrNickname")}
@@ -110,6 +113,8 @@ export function RegisterPage({ onUser }: { onUser: (user: User) => void }) {
       <p className="eyebrow">{t("join")}</p>
       <h1>{t("createYourAccount")}</h1>
       <p className="lede">{t("registerLede")}</p>
+      <p className="lede">{t("welcomeNote")}</p>
+      <NewsPanel />
       <form className="card form" onSubmit={submit}>
         <label>
           {t("name")}

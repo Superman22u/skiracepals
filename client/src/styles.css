@@ -50,6 +50,7 @@ a { color: inherit; }
   font-weight: 700;
 }
 .lede { color: var(--muted); margin: 10px 0 18px; }
+.lede + .lede { margin-top: 0; }
 .topbar {
   color: white;
   padding: 22px 20px 18px;
@@ -162,7 +163,7 @@ a { color: inherit; }
 .filters { display: flex; flex-wrap: wrap; gap: 8px; }
 .form { display: flex; flex-direction: column; gap: 12px; }
 label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; }
-input, select {
+input, select, textarea {
   width: 100%;
   border: 1px solid var(--line);
   background: #f8fbfb;
@@ -170,6 +171,9 @@ input, select {
   padding: 12px;
   color: var(--ink);
 }
+textarea { resize: vertical; }
+.news article + article, .news-item { border-top: 1px solid var(--line); padding-top: 12px; }
+.news-body { white-space: pre-wrap; margin: 4px 0 0; }
 .primary, .ghost {
   border: 0;
   border-radius: 14px;

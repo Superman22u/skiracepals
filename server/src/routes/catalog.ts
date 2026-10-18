@@ -13,6 +13,27 @@ import { scorePick } from "../scoring";
 import { leaderboard, myRaceScores } from "../scores";
 
 const router = Router();
+
+const newsSchema = z.object({
+  body: z.string().trim().min(1, "Enter the news").max(1000),
+});
+
+router.get(
+  "/news",
+  asyncRoute(async (_req, res) => {
+    const rows = await query<RowDataPacket & { id: number; body: string; createdAt: string }>(
+      "SELECT id, body, created_at AS createdAt FROM news ORDER BY id DESC LIMIT 30",
+    );
+    res.json({
+      news: rows.map((row) => ({
+        id: Number(row.id),
+        body: row.body,
+        createdAt: String(row.createdAt).slice(0, 10),
+      })),
+    });
+  }),
+);
+
 router.use(requireUser);
 
 const genderSchema = z.enum(["W", "M"]);
@@ -341,6 +362,44 @@ router.get(
       rows: board.rows,
       myRaces: myRaceScores(board.picks, user.id),
     });
+  }),
+);
+
+router.post(
+  "/admin/news",
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    const body = readBody(newsSchema, req.body, res);
+    if (!body) return;
+    const [result] = await pool.query<ResultSetHeader>("INSERT INTO news (body) VALUES (?)", [body.body]);
+    const rows = await query<RowDataPacket & { id: number; body: string; createdAt: string }>(
+      "SELECT id, body, created_at AS createdAt FROM news WHERE id = ?",
+      [result.insertId],
+    );
+    const row = rows[0];
+    res.status(201).json({
+      id: Number(row.id),
+      body: row.body,
+      createdAt: String(row.createdAt).slice(0, 10),
+    });
+  }),
+);
+
+router.delete(
+  "/admin/news/:id",
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      res.status(404).json({ error: "News not found" });
+      return;
+    }
+    const [result] = await pool.query<ResultSetHeader>("DELETE FROM news WHERE id = ?", [id]);
+    if (result.affectedRows === 0) {
+      res.status(404).json({ error: "News not found" });
+      return;
+    }
+    res.status(204).end();
   }),
 );
 

@@ -4,6 +4,7 @@ import { api } from "../api";
 import { useAuth } from "../auth";
 import { useI18n } from "../i18n";
 import { MailPanel } from "./MailPanel";
+import { NewsEditor } from "./NewsPanel";
 
 type Pal = {
   id: number;
@@ -61,6 +62,7 @@ export function AccountPage() {
         <p>{user.name}</p>
         <p className="meta">{user.email}</p>
       </section>
+      {user.isAdmin ? <NewsEditor /> : null}
       {user.isAdmin ? <MailPanel /> : null}
       <form className="card form" onSubmit={changePassword}>
         <h2>{t("changePassword")}</h2>

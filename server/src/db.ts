@@ -114,6 +114,11 @@ const statements = [
     CONSTRAINT fk_results_race FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE,
     CONSTRAINT fk_results_skier FOREIGN KEY (skier_id) REFERENCES skiers(id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS news (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    body TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ];
 
 export async function migrate(): Promise<void> {
