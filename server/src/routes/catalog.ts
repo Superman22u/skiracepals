@@ -63,6 +63,7 @@ type RaceRow = RowDataPacket & {
   discipline: "DH" | "SG" | "GS" | "SL" | "AC";
   gender: "W" | "M";
   raceDate: string;
+  fisRaceId: number | null;
   hasBet: number;
   resultCount: number;
 };
@@ -148,7 +149,7 @@ router.get(
     const id = raceId(req);
     const user = (req as AuthedRequest).user;
     const races = await query<RowDataPacket & RaceRow>(
-      `SELECT id, place, discipline, gender, race_date AS raceDate,
+      `SELECT id, place, discipline, gender, race_date AS raceDate, fis_race_id AS fisRaceId,
               (SELECT COUNT(*) FROM race_results rr WHERE rr.race_id = races.id) AS resultCount
        FROM races WHERE id = ?`,
       [id],
@@ -187,6 +188,7 @@ router.get(
       discipline: race.discipline,
       gender: race.gender,
       raceDate,
+      fisRaceId: race.fisRaceId == null ? null : Number(race.fisRaceId),
       bettingOpen,
       hasResults: scored,
       points: scored

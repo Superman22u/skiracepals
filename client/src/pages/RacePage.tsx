@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
-import { formatRaceDate, lastSeasonFis, rankLabel, translateReason } from "../format";
+import { fisRaceUrl, formatRaceDate, lastSeasonFis, rankLabel, translateReason } from "../format";
 import { useI18n } from "../i18n";
 import type { Discipline, Gender, RaceDetail, Skier } from "../types";
 
@@ -225,6 +225,11 @@ export function RacePage() {
         {race.points != null ? <p className="big-points">{t("pointsShort", { points: race.points })}</p> : null}
       </div>
       <div className="links">
+        {race.fisRaceId != null ? (
+          <a href={fisRaceUrl(race.fisRaceId)} target="_blank" rel="noreferrer">
+            {t("thisRaceFis")}
+          </a>
+        ) : null}
         {race.lastYear.map((item) => (
           <a key={item.url} href={item.url} target="_blank" rel="noreferrer">
             {t("lastYearResult")} · {formatRaceDate(item.raceDate, lang)}

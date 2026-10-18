@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
-import { formatRaceDate, lastSeasonFis, monthLabel } from "../format";
+import { formatRaceDate, lastSeasonFis, monthLabel, thisSeasonFis } from "../format";
 import { useI18n } from "../i18n";
 import { MailPanel } from "./MailPanel";
 import type { Discipline, Gender, RaceSummary } from "../types";
@@ -72,6 +72,7 @@ export function RacesPage() {
   return (
     <div className="stack">
       <p className="rule">{t("ruleRaces")}</p>
+      <p className="rule">{t("startListNote")}</p>
       {user.isAdmin ? <MailPanel variant="races" /> : null}
       <div className="filters">
         {(["all", "W", "M"] as const).map((value) => (
@@ -84,6 +85,11 @@ export function RacesPage() {
         </button>
       </div>
       <p className="muted">{t("racesOpen", { count: openCount })}</p>
+      <p className="fine">
+        <a href={thisSeasonFis} target="_blank" rel="noreferrer">
+          {t("thisSeasonFis")}
+        </a>
+      </p>
       <p className="fine">
         <a href={lastSeasonFis} target="_blank" rel="noreferrer">
           {t("lastSeasonFis")}
@@ -158,7 +164,7 @@ export function RacesPage() {
       ) : null}
       <p className="fine">
         {t("calendarNote")}{" "}
-        <a href="https://www.fis-ski.com/DB/alpine-skiing/calendar-results.html?sectorcode=AL&seasoncode=2027&categorycode=WC">
+        <a href={thisSeasonFis} target="_blank" rel="noreferrer">
           {t("fisWorldCup")}
         </a>
         {t("calendarClose")}

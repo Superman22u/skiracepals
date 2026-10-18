@@ -39,6 +39,7 @@ export type RaceDetail = {
   discipline: Discipline;
   gender: Gender;
   raceDate: string;
+  fisRaceId: number | null;
   bettingOpen: boolean;
   hasResults: boolean;
   points: number | null;

@@ -3,6 +3,13 @@ import { translate, type Lang } from "./i18n";
 export const lastSeasonFis =
   "https://www.fis-ski.com/DB/alpine-skiing/calendar-results.html?sectorcode=AL&seasoncode=2026&categorycode=WC";
 
+export const thisSeasonFis =
+  "https://www.fis-ski.com/DB/alpine-skiing/calendar-results.html?eventselection=&place=&sectorcode=AL&seasoncode=2027&categorycode=WC&disciplinecode=&gendercode=&racedate=&racecodex=&nationcode=&seasonmonth=X-2027&saveselection=-1&seasonselection=";
+
+export function fisRaceUrl(fisRaceId: number): string {
+  return `https://www.fis-ski.com/DB/general/results.html?sectorcode=AL&raceid=${fisRaceId}#results`;
+}
+
 export function rankLabel(position: number, lang: Lang): string {
   if (lang === "de") return `${position}.`;
   const ranks = ["1st", "2nd", "3rd", "4th", "5th"];
