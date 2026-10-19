@@ -26,7 +26,9 @@ const en = {
   welcomeNote:
     "You don't need to be an expert on the skiing World Cup. Last year's results help, and you get hints and suggestions while you enter your bet. You can delete your account at any time.",
   news: "News",
-  newsHelp: "Shown on the login page, the register page, and the races page.",
+  newsHelp: "Write the German and English news separately. Each language is shown only when the site is in that language, on the login page, the register page, and the races page.",
+  newsGerman: "German",
+  newsEnglish: "English",
   newsPlaceholder: "Write the news",
   publishNews: "Publish",
   publishing: "Publishing…",
@@ -236,7 +238,9 @@ const de: { [K in keyof typeof en]: string } = {
   welcomeNote:
     "Du musst kein Experte im Ski-Weltcup sein. Die Ergebnisse vom letzten Jahr helfen, und beim Tippen bekommst du Hinweise und Vorschläge. Dein Konto kannst du jederzeit löschen.",
   news: "Neuigkeiten",
-  newsHelp: "Steht auf der Anmeldeseite, der Registrierung und bei den Rennen.",
+  newsHelp: "Schreib die deutsche und die englische Neuigkeit getrennt. Jede Sprache erscheint nur, wenn die Seite in dieser Sprache ist, auf der Anmeldung, der Registrierung und bei den Rennen.",
+  newsGerman: "Deutsch",
+  newsEnglish: "Englisch",
   newsPlaceholder: "Schreib die Neuigkeit",
   publishNews: "Veröffentlichen",
   publishing: "Wird veröffentlicht…",

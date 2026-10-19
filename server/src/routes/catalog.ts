@@ -16,14 +16,23 @@ const router = Router();
 
 const newsSchema = z.object({
   body: z.string().trim().min(1, "Enter the news").max(1000),
+  lang: z.enum(["en", "de"]),
 });
 
 router.get(
   "/news",
-  asyncRoute(async (_req, res) => {
+  asyncRoute(async (req, res) => {
+    const lang = req.query.lang === "en" || req.query.lang === "de" ? req.query.lang : null;
+    if (!lang) {
+      res.set("Cache-Control", "no-store");
+      res.json({ news: [] });
+      return;
+    }
     const rows = await query<RowDataPacket & { id: number; body: string; createdAt: string }>(
-      "SELECT id, body, created_at AS createdAt FROM news ORDER BY id DESC LIMIT 30",
+      "SELECT id, body, created_at AS createdAt FROM news WHERE lang = ? ORDER BY id DESC LIMIT 30",
+      [lang],
     );
+    res.set("Cache-Control", "no-store");
     res.json({
       news: rows.map((row) => ({
         id: Number(row.id),
@@ -371,7 +380,10 @@ router.post(
   asyncRoute(async (req, res) => {
     const body = readBody(newsSchema, req.body, res);
     if (!body) return;
-    const [result] = await pool.query<ResultSetHeader>("INSERT INTO news (body) VALUES (?)", [body.body]);
+    const [result] = await pool.query<ResultSetHeader>("INSERT INTO news (lang, body) VALUES (?, ?)", [
+      body.lang,
+      body.body,
+    ]);
     const rows = await query<RowDataPacket & { id: number; body: string; createdAt: string }>(
       "SELECT id, body, created_at AS createdAt FROM news WHERE id = ?",
       [result.insertId],

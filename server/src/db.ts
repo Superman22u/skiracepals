@@ -116,6 +116,7 @@ const statements = [
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   `CREATE TABLE IF NOT EXISTS news (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    lang ENUM('en','de') NOT NULL,
     body TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
@@ -133,5 +134,9 @@ export async function migrate(): Promise<void> {
   );
   if (emailIndex.length === 0) {
     await pool.query("ALTER TABLE users ADD UNIQUE KEY uniq_users_email (email)");
+  }
+  const newsLang = await query<RowDataPacket>("SHOW COLUMNS FROM news LIKE 'lang'");
+  if (newsLang.length === 0) {
+    await pool.query("ALTER TABLE news ADD COLUMN lang ENUM('en','de') NOT NULL DEFAULT 'de'");
   }
 }
