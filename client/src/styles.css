@@ -173,7 +173,8 @@ input, select, textarea {
 }
 textarea { resize: vertical; }
 .news article + article, .news-item { border-top: 1px solid var(--line); padding-top: 12px; }
-.news-body { white-space: pre-wrap; margin: 4px 0 0; }
+.member-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.member-row .ghost, .member-row .danger { padding: 8px 12px; }
 .primary, .ghost {
   border: 0;
   border-radius: 14px;

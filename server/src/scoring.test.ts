@@ -36,6 +36,23 @@ test("ranking uses points, then exact hits, and shares a tie", () => {
   );
 });
 
+test("a group member with no bet is still ranked", () => {
+  const ranked = rankUsers(
+    [row(1, "ada", 1, 1, true)],
+    [
+      { userId: 1, nickname: "ada" },
+      { userId: 4, nickname: "dora" },
+    ],
+  );
+  assert.deepEqual(
+    ranked.map((user) => [user.nickname, user.rank, user.points]),
+    [
+      ["ada", 1, 3],
+      ["dora", 2, 0],
+    ],
+  );
+});
+
 function row(
   userId: number,
   nickname: string,

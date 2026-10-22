@@ -114,6 +114,20 @@ const statements = [
     CONSTRAINT fk_results_race FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE,
     CONSTRAINT fk_results_skier FOREIGN KEY (skier_id) REFERENCES skiers(id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS tip_groups (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(40) NOT NULL,
+    created_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_tip_groups_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS tip_group_members (
+    group_id INT NOT NULL,
+    user_id INT NOT NULL,
+    PRIMARY KEY (group_id, user_id),
+    CONSTRAINT fk_tip_group_members_group FOREIGN KEY (group_id) REFERENCES tip_groups(id) ON DELETE CASCADE,
+    CONSTRAINT fk_tip_group_members_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   `CREATE TABLE IF NOT EXISTS news (
     id INT AUTO_INCREMENT PRIMARY KEY,
     lang ENUM('en','de') NOT NULL,

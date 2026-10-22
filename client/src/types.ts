@@ -70,14 +70,23 @@ export type RaceDetail = {
   }[] | null;
 };
 
+export type RankedRow = {
+  rank: number;
+  userId: number;
+  nickname: string;
+  points: number;
+  exact: number;
+  topFive: number;
+};
+
 export type RankingResponse = {
-  rows: {
-    rank: number;
-    userId: number;
-    nickname: string;
-    points: number;
-    exact: number;
-    topFive: number;
+  visible: boolean;
+  rows: RankedRow[];
+  groups: {
+    id: number;
+    name: string;
+    ownerNickname: string;
+    rows: RankedRow[];
   }[];
   myRaces: {
     raceId: number;

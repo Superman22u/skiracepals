@@ -4,7 +4,7 @@ import { api } from "../api";
 import { useAuth } from "../auth";
 import { formatRaceDate } from "../format";
 import { useI18n } from "../i18n";
-import type { RankingResponse } from "../types";
+import type { RankedRow, RankingResponse } from "../types";
 
 export function RankingPage() {
   const { user } = useAuth();
@@ -24,31 +24,24 @@ export function RankingPage() {
   return (
     <div className="stack">
       <p className="rule">{t("ruleRanking")}</p>
-      {board.rows.length === 0 ? (
-        <p className="card empty">{t("nobodyBet")}</p>
+      {board.visible ? (
+        <>
+          {board.rows.length === 0 ? (
+            <p className="card empty">{t("nobodyBet")}</p>
+          ) : (
+            <RankingTable caption={t("seasonRanking")} rows={board.rows} me={user.id} />
+          )}
+          {board.groups.map((group) => (
+            <RankingTable
+              key={group.id}
+              caption={`${group.name} · ${t("groupOwner", { name: group.ownerNickname })}`}
+              rows={group.rows}
+              me={user.id}
+            />
+          ))}
+        </>
       ) : (
-        <table className="ranking">
-          <caption>{t("seasonRanking")}</caption>
-          <thead>
-            <tr>
-              <th>{t("rank")}</th>
-              <th>{t("nickname")}</th>
-              <th>{t("points")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {board.rows.map((row) => (
-              <tr key={row.userId} className={row.userId === user.id ? "me" : ""}>
-                <td>{row.rank}</td>
-                <td>
-                  {row.nickname}
-                  <span>{t("exactLine", { exact: row.exact, top: row.topFive })}</span>
-                </td>
-                <td>{row.points}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <p className="card empty">{t("rankingNeedsGroup")}</p>
       )}
       {board.myRaces.length > 0 ? (
         <section className="stack">
@@ -67,5 +60,33 @@ export function RankingPage() {
         </section>
       ) : null}
     </div>
+  );
+}
+
+function RankingTable({ caption, rows, me }: { caption: string; rows: RankedRow[]; me: number }) {
+  const { t } = useI18n();
+  return (
+    <table className="ranking">
+      <caption>{caption}</caption>
+      <thead>
+        <tr>
+          <th>{t("rank")}</th>
+          <th>{t("nickname")}</th>
+          <th>{t("points")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.userId} className={row.userId === me ? "me" : ""}>
+            <td>{row.rank}</td>
+            <td>
+              {row.nickname}
+              <span>{t("exactLine", { exact: row.exact, top: row.topFive })}</span>
+            </td>
+            <td>{row.points}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }

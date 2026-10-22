@@ -1,4 +1,4 @@
-import { Router, type Request } from "express";
+import { Router, type Request, type Response } from "express";
 import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { z } from "zod";
 import type { AuthedRequest } from "../auth";
@@ -6,13 +6,22 @@ import { requireAdmin, requireUser } from "../auth";
 import { addCalendarDays, isBettingOpen, zurichToday } from "../dates";
 import { rankField } from "../discipline-rank";
 import { pool, query, withTx } from "../db";
+import { loadGroups } from "../groups";
 import { asyncRoute, isDuplicate, readBody } from "../http";
 import { placeKey } from "../names";
 import { lastYearDetail, lastYearIndex, matchKey, suggestionFor } from "../prior";
-import { scorePick } from "../scoring";
+import { rankUsers, scorePick } from "../scoring";
 import { leaderboard, myRaceScores } from "../scores";
 
 const router = Router();
+
+const groupSchema = z.object({
+  name: z.string().trim().min(1, "Enter the group name").max(40, "Group name can be at most 40 characters"),
+});
+
+const groupMemberSchema = z.object({
+  userId: z.number().int().positive(),
+});
 
 const newsSchema = z.object({
   body: z.string().trim().min(1, "Enter the news").max(1000),
@@ -367,12 +376,164 @@ router.get(
   asyncRoute(async (req, res) => {
     const user = (req as AuthedRequest).user;
     const board = await leaderboard();
+    const groups = await loadGroups();
+    const memberOf = groups.filter((group) => group.members.some((member) => member.id === user.id));
+    const visible = user.isAdmin || memberOf.length > 0;
+    const shown = user.isAdmin ? groups : memberOf;
     res.json({
-      rows: board.rows,
+      visible,
+      rows: visible ? board.rows : [],
+      groups: visible
+        ? shown.map((group) => {
+            const ids = new Set(group.members.map((member) => member.id));
+            return {
+              id: group.id,
+              name: group.name,
+              ownerNickname: group.ownerNickname,
+              rows: rankUsers(
+                board.picks.filter((pick) => ids.has(pick.userId)),
+                group.members.map((member) => ({ userId: member.id, nickname: member.nickname })),
+              ),
+            };
+          })
+        : [],
       myRaces: myRaceScores(board.picks, user.id),
     });
   }),
 );
+
+router.get(
+  "/groups",
+  asyncRoute(async (req, res) => {
+    const user = (req as AuthedRequest).user;
+    const groups = await loadGroups();
+    const users = await query<RowDataPacket & { id: number; nickname: string }>(
+      "SELECT id, nickname FROM users ORDER BY nickname",
+    );
+    const view = (group: (typeof groups)[number], revealEmail: boolean) => ({
+      id: group.id,
+      name: group.name,
+      ownerId: group.ownerId,
+      ownerNickname: group.ownerNickname,
+      canManage: group.ownerId === user.id || user.isAdmin,
+      canEmail: group.ownerId === user.id,
+      members: group.members.map((member) => ({
+        id: member.id,
+        nickname: member.nickname,
+        email: revealEmail ? member.email : "",
+      })),
+    });
+    res.json({
+      directory: users.map((person) => ({ id: Number(person.id), nickname: person.nickname })),
+      owned: groups.filter((group) => group.ownerId === user.id).map((group) => view(group, true)),
+      joined: (user.isAdmin ? [] : groups.filter((group) => group.ownerId !== user.id && group.members.some((member) => member.id === user.id))).map(
+        (group) => view(group, false),
+      ),
+      others: (user.isAdmin ? groups.filter((group) => group.ownerId !== user.id) : []).map((group) => view(group, false)),
+    });
+  }),
+);
+
+router.post(
+  "/groups",
+  asyncRoute(async (req, res) => {
+    const body = readBody(groupSchema, req.body, res);
+    if (!body) return;
+    const user = (req as AuthedRequest).user;
+    const id = await withTx(async (conn) => {
+      const [result] = await conn.query<ResultSetHeader>("INSERT INTO tip_groups (name, created_by) VALUES (?, ?)", [
+        body.name,
+        user.id,
+      ]);
+      await conn.query("INSERT INTO tip_group_members (group_id, user_id) VALUES (?, ?)", [result.insertId, user.id]);
+      return result.insertId;
+    });
+    res.status(201).json({ id });
+  }),
+);
+
+router.post(
+  "/groups/:id/members",
+  asyncRoute(async (req, res) => {
+    const body = readBody(groupMemberSchema, req.body, res);
+    if (!body) return;
+    const group = await groupFor(req, res, true);
+    if (!group) return;
+    const people = await query<RowDataPacket & { id: number }>("SELECT id FROM users WHERE id = ?", [body.userId]);
+    if (people.length === 0) {
+      res.status(404).json({ error: "Unknown account" });
+      return;
+    }
+    try {
+      await pool.query("INSERT INTO tip_group_members (group_id, user_id) VALUES (?, ?)", [group.id, body.userId]);
+    } catch (error) {
+      if (isDuplicate(error)) {
+        res.status(409).json({ error: "That pal is already in the group" });
+        return;
+      }
+      throw error;
+    }
+    res.status(204).end();
+  }),
+);
+
+router.delete(
+  "/groups/:id/members/:userId",
+  asyncRoute(async (req, res) => {
+    const group = await groupFor(req, res, false);
+    if (!group) return;
+    const memberId = Number(req.params.userId);
+    const user = (req as AuthedRequest).user;
+    if (!Number.isInteger(memberId) || memberId <= 0) {
+      res.status(404).json({ error: "Unknown account" });
+      return;
+    }
+    if (memberId === group.ownerId && (group.ownerId === user.id || !user.isAdmin)) {
+      res.status(400).json({ error: "The group creator stays until the group is deleted" });
+      return;
+    }
+    const [result] = await pool.query<ResultSetHeader>("DELETE FROM tip_group_members WHERE group_id = ? AND user_id = ?", [
+      group.id,
+      memberId,
+    ]);
+    if (result.affectedRows === 0) {
+      res.status(404).json({ error: "Unknown account" });
+      return;
+    }
+    res.status(204).end();
+  }),
+);
+
+router.delete(
+  "/groups/:id",
+  asyncRoute(async (req, res) => {
+    const group = await groupFor(req, res, false);
+    if (!group) return;
+    await pool.query("DELETE FROM tip_groups WHERE id = ?", [group.id]);
+    res.status(204).end();
+  }),
+);
+
+async function groupFor(req: Request, res: Response, ownerOnly: boolean) {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(404).json({ error: "That group was not found" });
+    return null;
+  }
+  const groups = await loadGroups();
+  const group = groups.find((item) => item.id === id);
+  if (!group) {
+    res.status(404).json({ error: "That group was not found" });
+    return null;
+  }
+  const user = (req as AuthedRequest).user;
+  const owner = group.ownerId === user.id;
+  if (ownerOnly ? !owner : !owner && !user.isAdmin) {
+    res.status(403).json({ error: "Only the person who created the group can do that" });
+    return null;
+  }
+  return group;
+}
 
 router.post(
   "/admin/news",

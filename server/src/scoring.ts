@@ -41,8 +41,18 @@ export type RaceScore = {
   pending: boolean;
 };
 
-export function rankUsers(rows: PickScoreRow[]): RankedUser[] {
+export function rankUsers(rows: PickScoreRow[], include: { userId: number; nickname: string }[] = []): RankedUser[] {
   const map = new Map<number, RankedUser>();
+  for (const member of include) {
+    map.set(member.userId, {
+      userId: member.userId,
+      nickname: member.nickname,
+      points: 0,
+      exact: 0,
+      topFive: 0,
+      rank: 0,
+    });
+  }
   for (const row of rows) {
     let user = map.get(row.userId);
     if (!user) {
