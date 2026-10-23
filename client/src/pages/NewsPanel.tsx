@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "../api";
 import { formatRaceDate } from "../format";
 import { useI18n, type Lang } from "../i18n";
@@ -36,7 +36,7 @@ export function NewsPanel() {
       {items.map((item) => (
         <article key={item.id}>
           <p className="meta">{formatRaceDate(item.createdAt, lang)}</p>
-          <p className="news-body">{item.body}</p>
+          <NewsBody text={item.body} />
         </article>
       ))}
     </section>
@@ -142,6 +142,31 @@ export function NewsEditor() {
   );
 }
 
+function NewsBody({ text }: { text: string }) {
+  const parts: ReactNode[] = [];
+  const pattern = /https?:\/\/[^\s<>"']+/gi;
+  let last = 0;
+  for (const match of text.matchAll(pattern)) {
+    const start = match.index ?? 0;
+    if (start > last) parts.push(text.slice(last, start));
+    let url = match[0];
+    let trailing = "";
+    while (url.length > 0 && /[.,;:!?)]$/.test(url)) {
+      trailing = url.slice(-1) + trailing;
+      url = url.slice(0, -1);
+    }
+    parts.push(
+      <a key={start} href={url} target="_blank" rel="noreferrer">
+        {url}
+      </a>,
+    );
+    if (trailing) parts.push(trailing);
+    last = start + match[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return <p className="news-body">{parts}</p>;
+}
+
 function NewsDraft({
   label,
   body,
@@ -188,7 +213,7 @@ function NewsDraft({
       {items.map((item) => (
         <article className="news-item" key={item.id}>
           <p className="meta">{formatRaceDate(item.createdAt, displayLang)}</p>
-          <p className="news-body">{item.body}</p>
+          <NewsBody text={item.body} />
           {pendingId === item.id ? (
             <button className="danger" type="button" disabled={busy} onClick={() => void onRemove(newsLang, item.id)}>
               {t("removeNews")}

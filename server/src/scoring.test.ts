@@ -10,10 +10,11 @@ test("exact rank scores 3 and a top-5 skier in the wrong rank scores 1", () => {
   assert.equal(scorePick(4, null), 0);
 });
 
-test("betting closes on the race day in Zurich", () => {
-  assert.equal(isBettingOpen("2026-11-14", "2026-11-13"), true);
-  assert.equal(isBettingOpen("2026-11-14", "2026-11-14"), false);
-  assert.equal(isBettingOpen("2026-11-14", "2026-11-15"), false);
+test("betting stays open until 09:30 on race day in Zurich", () => {
+  assert.equal(isBettingOpen("2026-11-14", new Date("2026-11-13T12:00:00Z")), true);
+  assert.equal(isBettingOpen("2026-11-14", new Date("2026-11-14T08:29:00Z")), true);
+  assert.equal(isBettingOpen("2026-11-14", new Date("2026-11-14T08:30:00Z")), false);
+  assert.equal(isBettingOpen("2026-11-14", new Date("2026-11-14T10:00:00Z")), false);
   assert.equal(zurichToday(new Date("2026-11-13T23:30:00Z")), "2026-11-14");
   assert.equal(zurichToday(new Date("2026-11-13T22:30:00Z")), "2026-11-13");
 });

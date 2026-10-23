@@ -18,6 +18,7 @@ export type RaceSummary = {
   raceDate: string;
   bettingOpen: boolean;
   hasBet: boolean;
+  due: boolean;
   hasResults: boolean;
   points: number | null;
   lastYearUrl: string | null;

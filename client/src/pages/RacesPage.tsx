@@ -17,6 +17,7 @@ export function RacesPage() {
   const [error, setError] = useState("");
   const [gender, setGender] = useState<Gender | "all">("all");
   const [openOnly, setOpenOnly] = useState(true);
+  const [betFilter, setBetFilter] = useState<"all" | "none" | "in">("all");
   const [place, setPlace] = useState("");
   const [discipline, setDiscipline] = useState<Discipline>("SL");
   const [raceGender, setRaceGender] = useState<Gender>("W");
@@ -36,9 +37,11 @@ export function RacesPage() {
     return (races ?? []).filter((race) => {
       if (gender !== "all" && race.gender !== gender) return false;
       if (openOnly && !race.bettingOpen) return false;
+      if (betFilter === "none" && race.hasBet) return false;
+      if (betFilter === "in" && !race.hasBet) return false;
       return true;
     });
-  }, [races, gender, openOnly]);
+  }, [races, gender, openOnly, betFilter]);
 
   const groups = useMemo(() => {
     const map = new Map<string, RaceSummary[]>();
@@ -77,13 +80,22 @@ export function RacesPage() {
       <p className="rule">{t("startListNote")}</p>
       {user.isAdmin ? <MailPanel variant="races" /> : null}
       <div className="filters">
-        {(["all", "W", "M"] as const).map((value) => (
-          <button key={value} className={gender === value ? "chip on" : "chip"} onClick={() => setGender(value)} type="button">
-            {value === "all" ? t("all") : t(`gender_${value}`)}
-          </button>
-        ))}
+        <button
+          className={gender === "all" ? "chip" : "chip on"}
+          onClick={() => setGender((value) => (value === "all" ? "W" : value === "W" ? "M" : "all"))}
+          type="button"
+        >
+          {gender === "all" ? t("womenAndMen") : t(`gender_${gender}`)}
+        </button>
         <button className={openOnly ? "chip on" : "chip"} onClick={() => setOpenOnly((value) => !value)} type="button">
           {openOnly ? t("openOnly") : t("fullSeason")}
+        </button>
+        <button
+          className={betFilter === "all" ? "chip" : "chip on"}
+          onClick={() => setBetFilter((value) => (value === "all" ? "none" : value === "none" ? "in" : "all"))}
+          type="button"
+        >
+          {betFilter === "all" ? t("all") : betFilter === "none" ? t("noBet") : t("betIn")}
         </button>
       </div>
       <p className="muted">{t("racesOpen", { count: openCount })}</p>
@@ -102,7 +114,7 @@ export function RacesPage() {
         <section key={month} className="stack">
           <h2>{monthLabel(`${month}-01`, lang)}</h2>
           {items.map((race) => (
-            <div key={race.id} className="card race">
+            <div key={race.id} className={race.due ? "card race due" : "card race"}>
               <Link className="race-main" to={`/races/${race.id}`}>
                 <div>
                   <p className="place">{race.place}</p>

@@ -140,6 +140,7 @@ a { color: inherit; }
   padding: 14px;
 }
 .race { flex-direction: column; align-items: stretch; gap: 8px; }
+.card.race.due { background: #fff3cc; border-color: #e2b54a; }
 .race-main { display: flex; justify-content: space-between; gap: 12px; text-decoration: none; }
 .year-link, .links a { color: var(--lake); font-weight: 700; font-size: 14px; }
 .links { display: flex; flex-direction: column; gap: 6px; }
@@ -173,6 +174,8 @@ input, select, textarea {
 }
 textarea { resize: vertical; }
 .news article + article, .news-item { border-top: 1px solid var(--line); padding-top: 12px; }
+.news-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.news-body a { color: var(--lake); font-weight: 700; }
 .member-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .member-row .ghost, .member-row .danger { padding: 8px 12px; }
 .primary, .ghost {

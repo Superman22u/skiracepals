@@ -3,7 +3,7 @@ import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { z } from "zod";
 import type { AuthedRequest } from "../auth";
 import { requireAdmin, requireUser } from "../auth";
-import { addCalendarDays, isBettingOpen, zurichToday } from "../dates";
+import { addCalendarDays, isBetDue, isBettingOpen, zurichToday } from "../dates";
 import { rankField } from "../discipline-rank";
 import { pool, query, withTx } from "../db";
 import { loadGroups } from "../groups";
@@ -172,6 +172,7 @@ router.get(
           raceDate,
           bettingOpen,
           hasBet: Number(race.hasBet) > 0,
+          due: isBetDue(raceDate, Number(race.hasBet) > 0),
           hasResults,
           points,
           lastYearUrl: lastYear?.url ?? null,
@@ -286,7 +287,7 @@ router.put(
       return;
     }
     if (!isBettingOpen(String(race.raceDate).slice(0, 10))) {
-      res.status(403).json({ error: "Betting is closed on the day of the race" });
+      res.status(403).json({ error: "Betting closes at 09:30 on race day, Europe/Zurich" });
       return;
     }
     const ids = body.picks.map((pick) => pick.skierId);
