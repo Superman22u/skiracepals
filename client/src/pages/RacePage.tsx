@@ -58,7 +58,9 @@ export function RacePage() {
       }
     }
     setResultSlots(results);
-    const field = await api<Skier[]>(`/api/skiers?gender=${next.gender}&discipline=${next.discipline}`);
+    const field = await api<Skier[]>(
+      `/api/skiers?gender=${next.gender}&discipline=${next.discipline}&raceId=${next.id}`,
+    );
     setSkiers(field);
     await refresh();
   }
@@ -187,7 +189,12 @@ export function RacePage() {
     try {
       const created = await api<Skier>("/api/admin/skiers", {
         method: "POST",
-        body: JSON.stringify({ name: skierName, nation, gender: race?.gender }),
+        body: JSON.stringify({
+          name: skierName,
+          nation,
+          gender: race?.gender,
+          ...(race?.hasStartList ? { raceId: race.id } : {}),
+        }),
       });
       setSkiers((current) => [...current, { ...created, rank: null, rankNote: null }]);
       setSkierName("");
@@ -213,6 +220,12 @@ export function RacePage() {
       <Link className="back" to="/">
         {t("allRaces")}
       </Link>
+      {race.missingBets ? (
+        <section className="card">
+          <h2>{t("mailMissing")}</h2>
+          <p>{race.missingBets.length === 0 ? t("mailEveryoneBet") : race.missingBets.join(", ")}</p>
+        </section>
+      ) : null}
       <div className="card race-head">
         <p className="eyebrow">{formatRaceDate(race.raceDate, lang)}</p>
         <h2>{race.place}</h2>
@@ -222,6 +235,7 @@ export function RacePage() {
         <p className={race.bettingOpen ? "pill open" : "pill closed"}>
           {race.bettingOpen ? t("bettingOpen") : t("bettingClosed")}
         </p>
+        {race.hasStartList ? <p className="rule">{t("startListReady")}</p> : null}
         {race.points != null ? <p className="big-points">{t("pointsShort", { points: race.points })}</p> : null}
       </div>
       <div className="links">

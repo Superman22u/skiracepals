@@ -93,8 +93,12 @@ export async function suggestionFor(
   finishes: { name: string; nation: string; position: number }[],
 ): Promise<SuggestionPick[]> {
   const skiers = await query<RowDataPacket & { id: number; name: string; nation: string }>(
-    "SELECT id, name, nation FROM skiers WHERE gender = ? AND active = 1",
-    [gender],
+    `SELECT id, name, nation FROM skiers WHERE gender = ? AND active = 1
+     AND (
+       NOT EXISTS (SELECT 1 FROM race_starters WHERE race_id = ?)
+       OR id IN (SELECT skier_id FROM race_starters WHERE race_id = ?)
+     )`,
+    [gender, raceId, raceId],
   );
   const season = await query<RowDataPacket & { skierId: number; discipline: string; position: number }>(
     `SELECT rr.skier_id AS skierId, r.discipline, rr.position

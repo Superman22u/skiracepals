@@ -8,6 +8,7 @@ import { migrate } from "./db";
 import { authRouter } from "./routes/auth";
 import { catalogRouter } from "./routes/catalog";
 import { ensureAdmin, seedIfEmpty, seedPriorIfEmpty } from "./seed";
+import { applyPublishedStartLists } from "./start-lists";
 
 const app = express();
 app.use(express.json());
@@ -43,6 +44,7 @@ try {
   await seedIfEmpty();
   await seedPriorIfEmpty();
   await ensureAdmin();
+  await applyPublishedStartLists();
   app.listen(port, "0.0.0.0", () => {
     console.log(`Ski Race Pals API on http://localhost:${port}`);
   });

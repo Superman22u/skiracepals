@@ -122,6 +122,7 @@ export function RacesPage() {
                     {t(`discipline_${race.discipline}`)} · {t(`gender_${race.gender}`)}
                   </p>
                   <p className="meta">{formatRaceDate(race.raceDate, lang)}</p>
+                  {race.hasStartList ? <p className="meta">{t("startListIn")}</p> : null}
                 </div>
                 <div className="race-side">
                   <span className={race.hasResults ? "pill scored" : race.bettingOpen ? "pill open" : "pill closed"}>

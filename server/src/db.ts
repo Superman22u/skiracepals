@@ -134,6 +134,15 @@ const statements = [
     body TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS race_starters (
+    race_id INT NOT NULL,
+    skier_id INT NOT NULL,
+    start_order SMALLINT NOT NULL,
+    PRIMARY KEY (race_id, skier_id),
+    UNIQUE KEY uniq_race_start_order (race_id, start_order),
+    CONSTRAINT fk_starters_race FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE,
+    CONSTRAINT fk_starters_skier FOREIGN KEY (skier_id) REFERENCES skiers(id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ];
 
 export async function migrate(): Promise<void> {

@@ -94,6 +94,7 @@ const skierSchema = z.object({
     .regex(/^[A-Za-z]{3}$/, "Nation is a 3-letter code")
     .transform((value) => value.toUpperCase()),
   gender: genderSchema,
+  raceId: z.number().int().positive().optional(),
 });
 
 type RaceRow = RowDataPacket & {
@@ -105,6 +106,7 @@ type RaceRow = RowDataPacket & {
   fisRaceId: number | null;
   hasBet: number;
   resultCount: number;
+  startCount: number;
 };
 
 type SkierSlot = {
@@ -113,6 +115,26 @@ type SkierSlot = {
   name: string;
   nation: string;
 };
+
+async function attachToStartList(raceId: number | undefined, skierId: number): Promise<boolean> {
+  if (!raceId) return false;
+  const rows = await query<RowDataPacket & { c: number }>(
+    "SELECT COUNT(*) AS c FROM race_starters WHERE race_id = ?",
+    [raceId],
+  );
+  if (Number(rows[0]?.c ?? 0) === 0) return false;
+  const order = await query<RowDataPacket & { n: number }>(
+    "SELECT COALESCE(MAX(start_order), 0) AS n FROM race_starters WHERE race_id = ?",
+    [raceId],
+  );
+  const [result] = await pool.query<ResultSetHeader>(
+    `INSERT INTO race_starters (race_id, skier_id, start_order)
+     SELECT ?, ?, ?
+     WHERE NOT EXISTS (SELECT 1 FROM race_starters WHERE race_id = ? AND skier_id = ?)`,
+    [raceId, skierId, Number(order[0]?.n ?? 0) + 1, raceId, skierId],
+  );
+  return result.affectedRows > 0;
+}
 
 function raceId(req: Request): number {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
@@ -133,7 +155,8 @@ router.get(
     const races = await query<RaceRow>(
       `SELECT r.id, r.place, r.discipline, r.gender, r.race_date AS raceDate,
               (SELECT COUNT(*) FROM bets b WHERE b.race_id = r.id AND b.user_id = ?) AS hasBet,
-              (SELECT COUNT(*) FROM race_results rr WHERE rr.race_id = r.id) AS resultCount
+              (SELECT COUNT(*) FROM race_results rr WHERE rr.race_id = r.id) AS resultCount,
+              (SELECT COUNT(*) FROM race_starters rs WHERE rs.race_id = r.id) AS startCount
        FROM races r
        ORDER BY r.race_date, r.gender, FIELD(r.discipline, 'DH', 'SG', 'GS', 'SL', 'AC'), r.id`,
       [user.id],
@@ -173,6 +196,7 @@ router.get(
           bettingOpen,
           hasBet: Number(race.hasBet) > 0,
           due: isBetDue(raceDate, Number(race.hasBet) > 0),
+          hasStartList: Number(race.startCount) > 0,
           hasResults,
           points,
           lastYearUrl: lastYear?.url ?? null,
@@ -190,7 +214,8 @@ router.get(
     const user = (req as AuthedRequest).user;
     const races = await query<RowDataPacket & RaceRow>(
       `SELECT id, place, discipline, gender, race_date AS raceDate, fis_race_id AS fisRaceId,
-              (SELECT COUNT(*) FROM race_results rr WHERE rr.race_id = races.id) AS resultCount
+              (SELECT COUNT(*) FROM race_results rr WHERE rr.race_id = races.id) AS resultCount,
+              (SELECT COUNT(*) FROM race_starters rs WHERE rs.race_id = races.id) AS startCount
        FROM races WHERE id = ?`,
       [id],
     );
@@ -219,6 +244,17 @@ router.get(
       [id],
     );
     const history = await lastYearDetail(race.place, race.discipline, race.gender);
+    const missingBets = user.isAdmin
+      ? (
+          await query<RowDataPacket & { nickname: string }>(
+            `SELECT nickname FROM users
+             WHERE id <> ?
+               AND NOT EXISTS (SELECT 1 FROM bets b WHERE b.user_id = users.id AND b.race_id = ?)
+             ORDER BY nickname`,
+            [user.id, id],
+          )
+        ).map((person) => person.nickname)
+      : null;
     const showResults = user.isAdmin || !bettingOpen;
     const scored = !bettingOpen && storedResults.length > 0;
     const actualBySkier = new Map(storedResults.map((result) => [Number(result.skierId), Number(result.position)]));
@@ -229,6 +265,7 @@ router.get(
       gender: race.gender,
       raceDate,
       fisRaceId: race.fisRaceId == null ? null : Number(race.fisRaceId),
+      hasStartList: Number(race.startCount) > 0,
       bettingOpen,
       hasResults: scored,
       points: scored
@@ -258,6 +295,7 @@ router.get(
           }))
         : [],
       lastYear: history.links,
+      missingBets,
       suggestion: user.isAdmin
         ? await suggestionFor(id, race.discipline, race.gender, history.finishes)
         : null,
@@ -292,8 +330,12 @@ router.put(
     }
     const ids = body.picks.map((pick) => pick.skierId);
     const skiers = await query<RowDataPacket>(
-      `SELECT id FROM skiers WHERE gender = ? AND active = 1 AND id IN (${ids.map(() => "?").join(",")})`,
-      [race.gender, ...ids],
+      `SELECT id FROM skiers WHERE gender = ? AND active = 1 AND id IN (${ids.map(() => "?").join(",")})
+       AND (
+         NOT EXISTS (SELECT 1 FROM race_starters WHERE race_id = ?)
+         OR id IN (SELECT skier_id FROM race_starters WHERE race_id = ?)
+       )`,
+      [race.gender, ...ids, id, id],
     );
     if (skiers.length !== 5) {
       res.status(400).json({ error: "Choose five skiers from this start list" });
@@ -329,9 +371,24 @@ router.get(
       return;
     }
     const discipline = disciplineSchema.safeParse(req.query.discipline);
+    const raceRaw = Array.isArray(req.query.raceId) ? req.query.raceId[0] : req.query.raceId;
+    const raceFilter = raceRaw == null || raceRaw === "" ? null : Number(raceRaw);
+    if (raceFilter != null && (!Number.isInteger(raceFilter) || raceFilter <= 0)) {
+      res.status(400).json({ error: "Race not found" });
+      return;
+    }
     const skiers = await query<RowDataPacket & { id: number; name: string; nation: string; gender: "W" | "M" }>(
-      "SELECT id, name, nation, gender FROM skiers WHERE active = 1 AND gender = ?",
-      [gender.data],
+      `SELECT id, name, nation, gender FROM skiers
+       WHERE active = 1 AND gender = ?
+       ${
+         raceFilter == null
+           ? ""
+           : `AND (
+                NOT EXISTS (SELECT 1 FROM race_starters WHERE race_id = ?)
+                OR id IN (SELECT skier_id FROM race_starters WHERE race_id = ?)
+              )`
+       }`,
+      raceFilter == null ? [gender.data] : [gender.data, raceFilter, raceFilter],
     );
     const field = skiers.map((skier) => ({
       id: Number(skier.id),
@@ -715,16 +772,25 @@ router.post(
         "SELECT id, active FROM skiers WHERE name = ? AND gender = ?",
         [body.name, body.gender],
       );
-      if (existing[0]?.active === 0) {
-        await pool.query("UPDATE skiers SET active = 1, nation = ? WHERE id = ?", [body.nation, existing[0].id]);
-        res.status(201).json({ id: existing[0].id, name: body.name, nation: body.nation, gender: body.gender });
+      let skierId: number;
+      if (existing[0]) {
+        skierId = Number(existing[0].id);
+        if (existing[0].active === 0) {
+          await pool.query("UPDATE skiers SET active = 1, nation = ? WHERE id = ?", [body.nation, skierId]);
+        }
+      } else {
+        const [result] = await pool.query<ResultSetHeader>(
+          "INSERT INTO skiers (name, nation, gender) VALUES (?, ?, ?)",
+          [body.name, body.nation, body.gender],
+        );
+        skierId = Number(result.insertId);
+      }
+      const attached = await attachToStartList(body.raceId, skierId);
+      if (existing[0]?.active === 1 && !attached) {
+        res.status(409).json({ error: "That skier is already listed" });
         return;
       }
-      const [result] = await pool.query<ResultSetHeader>(
-        "INSERT INTO skiers (name, nation, gender) VALUES (?, ?, ?)",
-        [body.name, body.nation, body.gender],
-      );
-      res.status(201).json({ id: result.insertId, name: body.name, nation: body.nation, gender: body.gender });
+      res.status(201).json({ id: skierId, name: body.name, nation: body.nation, gender: body.gender });
     } catch (error) {
       if (isDuplicate(error)) {
         res.status(409).json({ error: "That skier is already listed" });
@@ -800,8 +866,12 @@ router.put(
     if (finishes.length > 0) {
       const ids = finishes.map((finish) => finish.skierId);
       const skiers = await query<RowDataPacket>(
-        `SELECT id FROM skiers WHERE gender = ? AND id IN (${ids.map(() => "?").join(",")})`,
-        [race.gender, ...ids],
+        `SELECT id FROM skiers WHERE gender = ? AND id IN (${ids.map(() => "?").join(",")})
+         AND (
+           NOT EXISTS (SELECT 1 FROM race_starters WHERE race_id = ?)
+           OR id IN (SELECT skier_id FROM race_starters WHERE race_id = ?)
+         )`,
+        [race.gender, ...ids, id, id],
       );
       if (skiers.length !== finishes.length) {
         res.status(400).json({ error: "Results have to use skiers from this race" });

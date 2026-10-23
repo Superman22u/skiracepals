@@ -19,6 +19,7 @@ export type RaceSummary = {
   bettingOpen: boolean;
   hasBet: boolean;
   due: boolean;
+  hasStartList: boolean;
   hasResults: boolean;
   points: number | null;
   lastYearUrl: string | null;
@@ -41,6 +42,7 @@ export type RaceDetail = {
   gender: Gender;
   raceDate: string;
   fisRaceId: number | null;
+  hasStartList: boolean;
   bettingOpen: boolean;
   hasResults: boolean;
   points: number | null;
@@ -69,6 +71,7 @@ export type RaceDetail = {
     nation: string;
     reason: string;
   }[] | null;
+  missingBets: string[] | null;
 };
 
 export type RankedRow = {
