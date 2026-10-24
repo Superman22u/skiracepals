@@ -258,6 +258,11 @@ a.primary {
   padding: 10px;
   gap: 10px;
 }
+.slot.off-list .slot-main,
+.slot.readonly.off-list {
+  background: #fff3cc;
+  border-color: #e2b54a;
+}
 .slot span, .skier-list button { display: flex; flex-direction: column; }
 .bib {
   width: 36px;

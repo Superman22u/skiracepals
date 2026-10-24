@@ -12,6 +12,8 @@ import { placeKey } from "../names";
 import { lastYearDetail, lastYearIndex, matchKey, suggestionFor } from "../prior";
 import { rankUsers, scorePick } from "../scoring";
 import { leaderboard, myRaceScores } from "../scores";
+import { StartListError } from "../fis-live";
+import { importStartList } from "../start-lists";
 
 const router = Router();
 
@@ -244,6 +246,36 @@ router.get(
       [id],
     );
     const history = await lastYearDetail(race.place, race.discipline, race.gender);
+    const starterIds =
+      Number(race.startCount) > 0
+        ? new Set(
+            (
+              await query<RowDataPacket & { skierId: number }>(
+                "SELECT skier_id AS skierId FROM race_starters WHERE race_id = ?",
+                [id],
+              )
+            ).map((row) => Number(row.skierId)),
+          )
+        : null;
+    const offListBets =
+      user.isAdmin && starterIds
+        ? groupAthletes(
+            await query<RowDataPacket & { nickname: string; name: string }>(
+              `SELECT u.nickname, s.name
+               FROM bets b
+               JOIN users u ON u.id = b.user_id
+               JOIN bet_picks bp ON bp.bet_id = b.id
+               JOIN skiers s ON s.id = bp.skier_id
+               WHERE b.race_id = ?
+                 AND NOT EXISTS (
+                   SELECT 1 FROM race_starters rs
+                   WHERE rs.race_id = b.race_id AND rs.skier_id = bp.skier_id
+                 )
+               ORDER BY u.nickname, bp.position`,
+              [id],
+            ),
+          )
+        : null;
     const missingBets = user.isAdmin
       ? (
           await query<RowDataPacket & { nickname: string }>(
@@ -282,6 +314,7 @@ router.get(
           skierId: Number(pick.skierId),
           name: pick.name,
           nation: pick.nation,
+          onStartList: starterIds == null || starterIds.has(Number(pick.skierId)),
           actual: scored ? inTop : null,
           points: scored ? scorePick(Number(pick.position), inTop) : null,
         };
@@ -296,6 +329,7 @@ router.get(
         : [],
       lastYear: history.links,
       missingBets,
+      offListBets,
       suggestion: user.isAdmin
         ? await suggestionFor(id, race.discipline, race.gender, history.finishes)
         : null,
@@ -680,6 +714,38 @@ router.get(
           .map(({ nickname, email }) => ({ nickname, email })),
       })),
     });
+  }),
+);
+
+function groupAthletes(rows: { nickname: string; name: string }[]): { nickname: string; athletes: string[] }[] {
+  const grouped: { nickname: string; athletes: string[] }[] = [];
+  for (const row of rows) {
+    const last = grouped[grouped.length - 1];
+    if (last?.nickname === row.nickname) last.athletes.push(row.name);
+    else grouped.push({ nickname: row.nickname, athletes: [row.name] });
+  }
+  return grouped;
+}
+
+router.post(
+  "/admin/races/:id/start-list",
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    const id = raceId(req);
+    if (!Number.isInteger(id) || id <= 0) {
+      res.status(404).json({ error: "Race not found" });
+      return;
+    }
+    try {
+      const count = await importStartList(id);
+      res.json({ count });
+    } catch (error) {
+      if (error instanceof StartListError) {
+        res.status(error.message === "Race not found" ? 404 : 400).json({ error: error.message });
+        return;
+      }
+      throw error;
+    }
   }),
 );
 

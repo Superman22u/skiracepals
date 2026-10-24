@@ -51,6 +51,7 @@ export type RaceDetail = {
     skierId: number;
     name: string;
     nation: string;
+    onStartList: boolean;
     actual: number | null;
     points: number | null;
   }[];
@@ -72,6 +73,7 @@ export type RaceDetail = {
     reason: string;
   }[] | null;
   missingBets: string[] | null;
+  offListBets: { nickname: string; athletes: string[] }[] | null;
 };
 
 export type RankedRow = {

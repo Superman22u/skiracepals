@@ -183,6 +183,25 @@ export function RacePage() {
     }
   }
 
+  async function updateStartList() {
+    setBusy(true);
+    setNotice("");
+    setError("");
+    try {
+      const result = await api<{ count: number }>(`/api/admin/races/${id}/start-list`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      setNoticeName(String(result.count));
+      setNotice("startListUpdated");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "couldNotUpdateStartList");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function addSkier(event: FormEvent) {
     event.preventDefault();
     setError("");
@@ -224,6 +243,17 @@ export function RacePage() {
         <section className="card">
           <h2>{t("mailMissing")}</h2>
           <p>{race.missingBets.length === 0 ? t("mailEveryoneBet") : race.missingBets.join(", ")}</p>
+        </section>
+      ) : null}
+      {race.offListBets && race.offListBets.length > 0 ? (
+        <section className="card">
+          <h2>{t("offListBets")}</h2>
+          <p className="muted">{t("offListBetsHelp")}</p>
+          {race.offListBets.map((row) => (
+            <p key={row.nickname}>
+              <strong>{row.nickname}</strong>: {row.athletes.join(", ")}
+            </p>
+          ))}
         </section>
       ) : null}
       <div className="card race-head">
@@ -273,21 +303,35 @@ export function RacePage() {
           </ol>
         </section>
       ) : null}
-      {notice ? <p className="note">{t(notice, { name: noticeName })}</p> : null}
+      {notice ? <p className="note">{t(notice, { name: noticeName, count: noticeName })}</p> : null}
       {error ? <p className="alert">{t(error)}</p> : null}
 
       <section className="stack">
         <h2>{t("yourFirstFive")}</h2>
+        {race.hasStartList && race.picks.some((pick) => !pick.onStartList) ? (
+          <p className="alert">
+            {t("betOffList", {
+              names: race.picks
+                .filter((pick) => !pick.onStartList)
+                .map((pick) => pick.name)
+                .join(", "),
+            })}
+            {race.bettingOpen ? ` ${t("betOffListChange")}` : ""}
+          </p>
+        ) : null}
         {race.bettingOpen ? (
           <>
-            {slots.map((skier, index) => (
-              <div className="slot" key={index}>
+            {slots.map((skier, index) => {
+              const offList = race.hasStartList && skier != null && skiers.length > 0 && !skiers.some((starter) => starter.id === skier.id);
+              return (
+              <div className={offList ? "slot off-list" : "slot"} key={index}>
                 <button className="slot-main" type="button" onClick={() => setSheet(index)}>
                   <span className="bib">{index + 1}</span>
                   {skier ? (
                     <span>
                       <strong>{skier.name}</strong>
                       <em>{skier.nation}</em>
+                      {offList ? <small>{t("notOnStartList")}</small> : null}
                     </span>
                   ) : (
                     <span className="muted">{t("chooseRank", { rank: rankLabel(index + 1, lang) })}</span>
@@ -310,7 +354,8 @@ export function RacePage() {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
             <button className="primary" type="button" disabled={busy || slots.some((slot) => !slot)} onClick={saveBet}>
               {busy ? t("saving") : t("saveBet")}
             </button>
@@ -319,11 +364,12 @@ export function RacePage() {
           <p className="card empty">{t("noBetOnRace")}</p>
         ) : (
           race.picks.map((pick) => (
-            <div className="slot readonly" key={pick.position}>
+            <div className={pick.onStartList ? "slot readonly" : "slot readonly off-list"} key={pick.position}>
               <span className="bib">{pick.position}</span>
               <span>
                 <strong>{pick.name}</strong>
                 <em>{pick.nation}</em>
+                {pick.onStartList ? null : <small>{t("notOnStartList")}</small>}
                 {race.hasResults ? (
                   <small>{pick.actual ? t("finished", { rank: rankLabel(pick.actual, lang) }) : t("outsideTop")}</small>
                 ) : (
@@ -456,6 +502,17 @@ export function RacePage() {
             ) : (
               <button className="danger" type="button" onClick={() => setConfirmingDelete(true)}>
                 {t("deleteRace")}
+              </button>
+            )}
+          </div>
+          <div className="card form">
+            <h3>{t("importStartList")}</h3>
+            <p className="muted">{t("importStartListHelp")}</p>
+            {race.fisRaceId == null ? (
+              <p className="alert">{t("noFisRaceId")}</p>
+            ) : (
+              <button className="primary" type="button" disabled={busy} onClick={() => void updateStartList()}>
+                {busy ? t("saving") : t("updateStartList")}
               </button>
             )}
           </div>
