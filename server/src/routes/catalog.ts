@@ -956,4 +956,83 @@ router.put(
   }),
 );
 
+const commentSchema = z.object({
+  body: z.string().trim().min(1, "Write a comment").max(300, "Write a comment"),
+});
+
+type CommentRow = RowDataPacket & {
+  id: number;
+  body: string;
+  createdAt: string;
+  authorId: number;
+  author: string;
+};
+
+function toComment(row: CommentRow) {
+  return {
+    id: Number(row.id),
+    body: row.body,
+    createdAt: String(row.createdAt),
+    authorId: Number(row.authorId),
+    author: row.author,
+  };
+}
+
+router.get(
+  "/comments",
+  asyncRoute(async (_req, res) => {
+    const rows = await query<CommentRow>(
+      `SELECT c.id, c.body, c.created_at AS createdAt, c.author_id AS authorId, u.nickname AS author
+       FROM comments c
+       JOIN users u ON u.id = c.author_id
+       ORDER BY c.id DESC
+       LIMIT 100`,
+    );
+    res.set("Cache-Control", "no-store");
+    res.json({ comments: rows.reverse().map(toComment) });
+  }),
+);
+
+router.post(
+  "/comments",
+  asyncRoute(async (req, res) => {
+    const body = readBody(commentSchema, req.body, res);
+    if (!body) return;
+    const user = (req as AuthedRequest).user;
+    const [result] = await pool.query<ResultSetHeader>("INSERT INTO comments (author_id, body) VALUES (?, ?)", [
+      user.id,
+      body.body,
+    ]);
+    const rows = await query<CommentRow>(
+      `SELECT c.id, c.body, c.created_at AS createdAt, c.author_id AS authorId, u.nickname AS author
+       FROM comments c JOIN users u ON u.id = c.author_id WHERE c.id = ?`,
+      [result.insertId],
+    );
+    res.status(201).json(toComment(rows[0]));
+  }),
+);
+
+router.delete(
+  "/comments/:id",
+  asyncRoute(async (req, res) => {
+    const user = (req as AuthedRequest).user;
+    const id = raceId(req);
+    const current = await query<RowDataPacket & { authorId: number }>(
+      "SELECT author_id AS authorId FROM comments WHERE id = ?",
+      [id],
+    );
+    const comment = current[0];
+    if (!comment) {
+      res.status(404).json({ error: "Comment not found" });
+      return;
+    }
+    if (!user.isAdmin && Number(comment.authorId) !== user.id) {
+      res.status(403).json({ error: "Only the author or the administrator can remove a comment" });
+      return;
+    }
+    await pool.query("DELETE FROM comments WHERE id = ?", [id]);
+    res.status(204).end();
+  }),
+);
+
 export const catalogRouter = router;

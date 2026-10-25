@@ -1,7 +1,7 @@
 :root {
   color: #17232b;
   background: #0b4f86;
-  font-family: "Outfit", "Segoe UI", sans-serif;
+  font-family: "Outfit", "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Segoe UI", sans-serif;
   line-height: 1.4;
   --ink: #17232b;
   --muted: #5d6c74;
@@ -218,7 +218,8 @@ a.primary {
   transform: translateX(-50%);
   width: min(480px, 100%);
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
+  font-size: 13px;
   background: white;
   border-top: 1px solid var(--line);
   padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
@@ -232,6 +233,93 @@ a.primary {
   border-radius: 12px;
 }
 .nav a.active { background: #e7f3f1; color: var(--deep); }
+.nav {
+  z-index: 10;
+  height: var(--nav);
+  align-content: center;
+}
+.nav a.has-new { position: relative; }
+.nav a.has-new::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--red);
+}
+.comments-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 84px;
+}
+.comments-page h2 { font-size: 28px; }
+.comments-list { display: flex; flex-direction: column; gap: 12px; }
+.comment-line { display: flex; flex-direction: column; gap: 2px; }
+.comment-line p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.comment-line strong { color: var(--ink); }
+.comment-line button {
+  align-self: flex-start;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  padding: 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+.comments-composer {
+  position: fixed;
+  z-index: 2;
+  bottom: var(--nav);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(480px, 100%);
+  padding: 10px 16px 12px;
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
+.comments-composer .alert { margin-bottom: 8px; }
+.comments-form { display: flex; gap: 8px; align-items: center; }
+.comments-form input { flex: 1; width: auto; min-width: 0; }
+.comments-form .primary { width: auto; padding: 10px 14px; }
+.emoji-toggle {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  font-size: 22px;
+  line-height: 1;
+}
+.emoji-pop {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(100% - 4px);
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  max-height: 220px;
+  overflow: auto;
+  padding: 8px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(11, 79, 134, 0.16);
+}
+.emoji-pop button {
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 0;
+  font-size: 22px;
+  line-height: 1;
+}
+.emoji-pop button:hover { background: #e7f3f1; }
 .back { color: var(--lake); font-weight: 700; text-decoration: none; }
 .race-head h2 { font-size: 32px; margin-top: 4px; }
 .big-points {

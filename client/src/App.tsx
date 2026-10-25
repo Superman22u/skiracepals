@@ -7,6 +7,7 @@ import { Shell } from "./Shell";
 import { AboutPage } from "./pages/AboutPage";
 import { AccountPage } from "./pages/AccountPage";
 import { ForgotPage, LoginPage, RegisterPage } from "./pages/AuthPages";
+import { CommentsPage } from "./pages/CommentsPage";
 import { RacePage } from "./pages/RacePage";
 import { RacesPage } from "./pages/RacesPage";
 import { RankingPage } from "./pages/RankingPage";
@@ -43,6 +44,7 @@ export function App() {
           <Route path="/races/:id" element={<RacePage />} />
           <Route path="/ranking" element={<RankingPage />} />
           <Route path="/account" element={<AccountPage />} />
+          <Route path="/comments" element={<CommentsPage />} />
         </Route>
       </Routes>
     </AuthContext.Provider>
