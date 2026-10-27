@@ -134,6 +134,95 @@ router.get(
   }),
 );
 
+const settingsSchema = z.object({
+  email48: z.boolean(),
+  email24: z.boolean(),
+  whatsapp48: z.boolean(),
+  whatsapp24: z.boolean(),
+  phone: z.string().trim().max(20),
+  prefillAfterClose: z.boolean(),
+});
+
+type SettingsRow = RowDataPacket & {
+  email48: number;
+  email24: number;
+  whatsapp48: number;
+  whatsapp24: number;
+  phone: string | null;
+  prefillAfterClose: number;
+};
+
+function presentSettings(row: SettingsRow) {
+  return {
+    email48: Number(row.email48) === 1,
+    email24: Number(row.email24) === 1,
+    whatsapp48: Number(row.whatsapp48) === 1,
+    whatsapp24: Number(row.whatsapp24) === 1,
+    phone: row.phone ?? "",
+    prefillAfterClose: Number(row.prefillAfterClose) === 1,
+  };
+}
+
+router.get(
+  "/settings",
+  requireUser,
+  asyncRoute(async (req, res) => {
+    const rows = await query<SettingsRow>(
+      `SELECT remind_email_48 AS email48, remind_email_24 AS email24,
+              remind_whatsapp_48 AS whatsapp48, remind_whatsapp_24 AS whatsapp24,
+              whatsapp_phone AS phone, prefill_after_close AS prefillAfterClose
+       FROM users WHERE id = ?`,
+      [(req as AuthedRequest).user.id],
+    );
+    const row = rows[0];
+    if (!row) {
+      res.status(401).json({ error: "Please log in" });
+      return;
+    }
+    res.json(presentSettings(row));
+  }),
+);
+
+router.put(
+  "/settings",
+  requireUser,
+  asyncRoute(async (req, res) => {
+    const body = readBody(settingsSchema, req.body, res);
+    if (!body) return;
+    const phone = body.phone.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "");
+    const digits = phone.replace(/\D/g, "");
+    const wantsWhatsapp = body.whatsapp48 || body.whatsapp24;
+    if (wantsWhatsapp && (digits.length < 8 || digits.length > 15)) {
+      res.status(400).json({ error: "Enter a WhatsApp number" });
+      return;
+    }
+    await pool.query(
+      `UPDATE users
+       SET remind_email_48 = ?, remind_email_24 = ?, remind_whatsapp_48 = ?, remind_whatsapp_24 = ?,
+           remind_whatsapp = ?, whatsapp_phone = ?, prefill_after_close = ?
+       WHERE id = ?`,
+      [
+        body.email48 ? 1 : 0,
+        body.email24 ? 1 : 0,
+        body.whatsapp48 ? 1 : 0,
+        body.whatsapp24 ? 1 : 0,
+        wantsWhatsapp ? 1 : 0,
+        wantsWhatsapp && digits ? digits : null,
+        body.prefillAfterClose ? 1 : 0,
+        (req as AuthedRequest).user.id,
+      ],
+    );
+    res.json({
+      email48: body.email48,
+      email24: body.email24,
+      whatsapp48: body.whatsapp48,
+      whatsapp24: body.whatsapp24,
+      phone: wantsWhatsapp ? digits : "",
+      prefillAfterClose: body.prefillAfterClose,
+    });
+  }),
+);
+
 router.post(
   "/password",
   requireUser,

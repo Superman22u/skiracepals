@@ -3,6 +3,7 @@ import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { z } from "zod";
 import type { AuthedRequest } from "../auth";
 import { requireAdmin, requireUser } from "../auth";
+import { fillDueBets } from "../bet-fill";
 import { addCalendarDays, isBetDue, isBettingOpen, zurichToday } from "../dates";
 import { rankField } from "../discipline-rank";
 import { pool, query, withTx } from "../db";
@@ -13,6 +14,7 @@ import { lastYearDetail, lastYearIndex, matchKey, suggestionFor } from "../prior
 import { rankUsers, scorePick } from "../scoring";
 import { leaderboard, myRaceScores } from "../scores";
 import { StartListError } from "../fis-live";
+import { listDueReminders } from "../reminders";
 import { importStartList } from "../start-lists";
 
 const router = Router();
@@ -154,6 +156,7 @@ router.get(
   "/races",
   asyncRoute(async (req, res) => {
     const user = (req as AuthedRequest).user;
+    await fillDueBets();
     const races = await query<RaceRow>(
       `SELECT r.id, r.place, r.discipline, r.gender, r.race_date AS raceDate,
               (SELECT COUNT(*) FROM bets b WHERE b.race_id = r.id AND b.user_id = ?) AS hasBet,
@@ -228,8 +231,9 @@ router.get(
     }
     const raceDate = String(race.raceDate).slice(0, 10);
     const bettingOpen = isBettingOpen(raceDate);
-    const picks = await query<RowDataPacket & SkierSlot>(
-      `SELECT bp.position, s.id AS skierId, s.name, s.nation
+    await fillDueBets();
+    const picks = await query<RowDataPacket & SkierSlot & { filled: "player" | "day-before" | "after-close" }>(
+      `SELECT b.filled, bp.position, s.id AS skierId, s.name, s.nation
        FROM bets b
        JOIN bet_picks bp ON bp.bet_id = b.id
        JOIN skiers s ON s.id = bp.skier_id
@@ -300,6 +304,7 @@ router.get(
       hasStartList: Number(race.startCount) > 0,
       bettingOpen,
       hasResults: scored,
+      filled: picks[0]?.filled ?? null,
       points: scored
         ? picks.reduce((sum, pick) => {
             const actual = actualBySkier.get(Number(pick.skierId)) ?? null;
@@ -377,8 +382,8 @@ router.put(
     }
     await withTx(async (conn) => {
       await conn.query(
-        `INSERT INTO bets (user_id, race_id) VALUES (?, ?)
-         ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP`,
+        `INSERT INTO bets (user_id, race_id, filled) VALUES (?, ?, 'player')
+         ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP, filled = 'player'`,
         [user.id, id],
       );
       const [betRows] = await conn.query<RowDataPacket[]>("SELECT id FROM bets WHERE user_id = ? AND race_id = ?", [
@@ -470,25 +475,22 @@ router.get(
     const board = await leaderboard();
     const groups = await loadGroups();
     const memberOf = groups.filter((group) => group.members.some((member) => member.id === user.id));
-    const visible = user.isAdmin || memberOf.length > 0;
     const shown = user.isAdmin ? groups : memberOf;
     res.json({
-      visible,
-      rows: visible ? board.rows : [],
-      groups: visible
-        ? shown.map((group) => {
-            const ids = new Set(group.members.map((member) => member.id));
-            return {
-              id: group.id,
-              name: group.name,
-              ownerNickname: group.ownerNickname,
-              rows: rankUsers(
-                board.picks.filter((pick) => ids.has(pick.userId)),
-                group.members.map((member) => ({ userId: member.id, nickname: member.nickname })),
-              ),
-            };
-          })
-        : [],
+      visible: true,
+      rows: board.rows,
+      groups: shown.map((group) => {
+        const ids = new Set(group.members.map((member) => member.id));
+        return {
+          id: group.id,
+          name: group.name,
+          ownerNickname: group.ownerNickname,
+          rows: rankUsers(
+            board.picks.filter((pick) => ids.has(pick.userId)),
+            group.members.map((member) => ({ userId: member.id, nickname: member.nickname })),
+          ),
+        };
+      }),
       myRaces: myRaceScores(board.picks, user.id),
     });
   }),
@@ -701,8 +703,10 @@ router.get(
       nickname: user.nickname,
       email: user.email,
     }));
+    const reminders = await listDueReminders(adminId);
     res.json({
       participants: people.map(({ nickname, email }) => ({ nickname, email })),
+      reminders,
       upcoming: races.map((race) => ({
         id: Number(race.id),
         place: race.place,

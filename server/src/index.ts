@@ -8,6 +8,7 @@ import { migrate } from "./db";
 import { authRouter } from "./routes/auth";
 import { catalogRouter } from "./routes/catalog";
 import { ensureAdmin, seedIfEmpty, seedPriorIfEmpty } from "./seed";
+import { fillDueBets } from "./bet-fill";
 import { applyPublishedStartLists } from "./start-lists";
 
 const app = express();
@@ -48,6 +49,11 @@ try {
   app.listen(port, "0.0.0.0", () => {
     console.log(`Ski Race Pals API on http://localhost:${port}`);
   });
+  const fillTimer = setInterval(() => {
+    fillDueBets().catch((error) => console.error("Could not fill bets", error));
+  }, 60_000);
+  fillTimer.unref();
+  void fillDueBets().catch((error) => console.error("Could not fill bets", error));
 } catch (error) {
   console.error("\nCould not start. MariaDB needs the skirace database.");
   console.error('Run: & "C:\\Program Files\\MariaDB 12.2\\bin\\mariadb.exe" -u root -p < server\\sql\\setup-db.sql');

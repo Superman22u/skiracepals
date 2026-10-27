@@ -24,25 +24,20 @@ export function RankingPage() {
   return (
     <div className="stack">
       <p className="rule">{t("ruleRanking")}</p>
-      {board.visible ? (
-        <>
-          {board.rows.length === 0 ? (
-            <p className="card empty">{t("nobodyBet")}</p>
-          ) : (
-            <RankingTable caption={t("seasonRanking")} rows={board.rows} me={user.id} />
-          )}
-          {board.groups.map((group) => (
-            <RankingTable
-              key={group.id}
-              caption={`${group.name} · ${t("groupOwner", { name: group.ownerNickname })}`}
-              rows={group.rows}
-              me={user.id}
-            />
-          ))}
-        </>
+      {board.rows.length === 0 ? (
+        <p className="card empty">{t("nobodyBet")}</p>
       ) : (
-        <p className="card empty">{t("rankingNeedsGroup")}</p>
+        <RankingTable caption={t("seasonRanking")} rows={board.rows} me={user.id} />
       )}
+      {board.groups.map((group) => (
+        <RankingTable
+          key={group.id}
+          caption={`${group.name} · ${t("groupOwner", { name: group.ownerNickname })}`}
+          rows={group.rows}
+          me={user.id}
+        />
+      ))}
+      {!user.isAdmin && board.groups.length === 0 ? <p className="card empty">{t("rankingNeedsGroup")}</p> : null}
       {board.myRaces.length > 0 ? (
         <section className="stack">
           <h2>{t("yourRaces")}</h2>

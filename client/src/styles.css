@@ -162,8 +162,22 @@ a { color: inherit; }
 .pill.scored { background: #fff1cc; color: var(--gold); }
 .chip { background: white; color: var(--ink); border: 1px solid var(--line); }
 .filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.section-nav { display: flex; flex-wrap: wrap; gap: 8px; }
+.section-nav button {
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.section-nav button.on { background: #e5f6ee; color: var(--pine); border-color: transparent; }
+.help-card { margin: 0; }
 .form { display: flex; flex-direction: column; gap: 12px; }
 label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; }
+.check { flex-direction: row; align-items: flex-start; gap: 10px; }
+.check input { width: auto; margin-top: 2px; }
 input, select, textarea {
   width: 100%;
   border: 1px solid var(--line);

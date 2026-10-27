@@ -169,4 +169,21 @@ export async function migrate(): Promise<void> {
   if (newsLang.length === 0) {
     await pool.query("ALTER TABLE news ADD COLUMN lang ENUM('en','de') NOT NULL DEFAULT 'de'");
   }
+  await ensureColumn("users", "remind_email_48", "remind_email_48 TINYINT(1) NOT NULL DEFAULT 0");
+  await ensureColumn("users", "remind_email_24", "remind_email_24 TINYINT(1) NOT NULL DEFAULT 0");
+  await ensureColumn("users", "remind_whatsapp", "remind_whatsapp TINYINT(1) NOT NULL DEFAULT 0");
+  await ensureColumn("users", "remind_whatsapp_48", "remind_whatsapp_48 TINYINT(1) NOT NULL DEFAULT 0");
+  await ensureColumn("users", "remind_whatsapp_24", "remind_whatsapp_24 TINYINT(1) NOT NULL DEFAULT 0");
+  await ensureColumn("users", "whatsapp_phone", "whatsapp_phone VARCHAR(20) NULL");
+  await ensureColumn("users", "prefill_after_close", "prefill_after_close TINYINT(1) NOT NULL DEFAULT 0");
+  await ensureColumn(
+    "bets",
+    "filled",
+    "filled ENUM('player','day-before','after-close') NOT NULL DEFAULT 'player'",
+  );
+}
+
+async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
+  const columns = await query<RowDataPacket>(`SHOW COLUMNS FROM \`${table}\` LIKE ?`, [column]);
+  if (columns.length === 0) await pool.query(`ALTER TABLE \`${table}\` ADD COLUMN ${definition}`);
 }

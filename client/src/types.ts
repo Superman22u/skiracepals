@@ -45,6 +45,7 @@ export type RaceDetail = {
   hasStartList: boolean;
   bettingOpen: boolean;
   hasResults: boolean;
+  filled: "player" | "day-before" | "after-close" | null;
   points: number | null;
   picks: {
     position: number;

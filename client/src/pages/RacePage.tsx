@@ -308,6 +308,8 @@ export function RacePage() {
 
       <section className="stack">
         <h2>{t("yourFirstFive")}</h2>
+        {race.filled === "day-before" ? <p className="note">{t("filledDayBefore")}</p> : null}
+        {race.filled === "after-close" ? <p className="note">{t("filledAfterClose")}</p> : null}
         {race.hasStartList && race.picks.some((pick) => !pick.onStartList) ? (
           <p className="alert">
             {t("betOffList", {

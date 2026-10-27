@@ -7,3 +7,8 @@ export function outlookMail(emails: string[], subject: string, body: string): st
   });
   return `mailto:?${params.toString()}`;
 }
+
+export function whatsappLink(phone: string, text: string): string {
+  const digits = phone.replace(/\D/g, "");
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+}

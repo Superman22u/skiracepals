@@ -6,6 +6,10 @@ import { useI18n } from "../i18n";
 import { MailPanel } from "./MailPanel";
 import { GroupsPanel } from "./GroupsPanel";
 import { NewsEditor } from "./NewsPanel";
+import { HelpPanel } from "./HelpPanel";
+import { SettingsPanel } from "./SettingsPanel";
+
+type Section = "settings" | "groups" | "news" | "email" | "password" | "skiers" | "help";
 
 type Pal = {
   id: number;
@@ -24,6 +28,20 @@ export function AccountPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [pals, setPals] = useState<Pal[]>([]);
+  const [section, setSection] = useState<Section>("settings");
+  const sections: { id: Section; label: string }[] = [
+    { id: "settings", label: t("settingsTitle") },
+    { id: "groups", label: t("groups") },
+    ...(user.isAdmin
+      ? [
+          { id: "news" as const, label: t("news") },
+          { id: "email" as const, label: t("sectionEmail") },
+        ]
+      : []),
+    { id: "password", label: t("sectionPassword") },
+    ...(user.isAdmin ? [{ id: "skiers" as const, label: t("sectionSkiers") }] : []),
+    { id: "help", label: t("sectionHelp") },
+  ];
 
   async function logout() {
     await api("/api/auth/logout", { method: "POST" });
@@ -63,10 +81,25 @@ export function AccountPage() {
         <p>{user.name}</p>
         <p className="meta">{user.email}</p>
       </section>
-      <GroupsPanel />
-      {user.isAdmin ? <NewsEditor /> : null}
-      {user.isAdmin ? <MailPanel /> : null}
-      <form className="card form" onSubmit={changePassword}>
+      <nav className="section-nav" aria-label={t("navAccount")}>
+        {sections.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={section === item.id ? "on" : ""}
+            aria-pressed={section === item.id}
+            onClick={() => setSection(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </nav>
+      {section === "settings" ? <SettingsPanel /> : null}
+      {section === "groups" ? <GroupsPanel /> : null}
+      {section === "news" && user.isAdmin ? <NewsEditor /> : null}
+      {section === "email" && user.isAdmin ? <MailPanel /> : null}
+      {section === "password" ? (
+        <form className="card form" onSubmit={changePassword}>
         <h2>{t("changePassword")}</h2>
         <label>
           {t("currentPassword")}
@@ -94,8 +127,9 @@ export function AccountPage() {
         <button className="primary" type="submit">
           {t("updatePassword")}
         </button>
-      </form>
-      {user.isAdmin ? (
+        </form>
+      ) : null}
+      {section === "password" && user.isAdmin ? (
         <section className="stack">
           <h2>{t("resetAPassword")}</h2>
           <p className="muted">{t("resetHelp")}</p>
@@ -112,10 +146,11 @@ export function AccountPage() {
           ))}
         </section>
       ) : null}
-      {user.isAdmin ? <RemoveSkiers /> : null}
-      {!user.isAdmin ? (
+      {section === "skiers" && user.isAdmin ? <RemoveSkiers /> : null}
+      {section === "password" && !user.isAdmin ? (
         <DeleteOwnAccount nickname={user.nickname} onDeleted={() => { setUser(null); navigate("/login"); }} />
       ) : null}
+      {section === "help" ? <HelpPanel /> : null}
       <p className="switch">
         <Link to="/about">{t("about")}</Link>
       </p>
