@@ -8,8 +8,9 @@ import { GroupsPanel } from "./GroupsPanel";
 import { NewsEditor } from "./NewsPanel";
 import { HelpPanel } from "./HelpPanel";
 import { SettingsPanel } from "./SettingsPanel";
+import { ActivityPanel } from "./ActivityPanel";
 
-type Section = "settings" | "groups" | "news" | "email" | "password" | "skiers" | "help";
+type Section = "settings" | "groups" | "news" | "email" | "activity" | "password" | "skiers" | "help";
 
 type Pal = {
   id: number;
@@ -36,6 +37,7 @@ export function AccountPage() {
       ? [
           { id: "news" as const, label: t("news") },
           { id: "email" as const, label: t("sectionEmail") },
+          { id: "activity" as const, label: t("sectionActivity") },
         ]
       : []),
     { id: "password", label: t("sectionPassword") },
@@ -98,6 +100,7 @@ export function AccountPage() {
       {section === "groups" ? <GroupsPanel /> : null}
       {section === "news" && user.isAdmin ? <NewsEditor /> : null}
       {section === "email" && user.isAdmin ? <MailPanel /> : null}
+      {section === "activity" && user.isAdmin ? <ActivityPanel /> : null}
       {section === "password" ? (
         <form className="card form" onSubmit={changePassword}>
         <h2>{t("changePassword")}</h2>

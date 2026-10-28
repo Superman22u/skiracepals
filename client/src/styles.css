@@ -273,6 +273,8 @@ a.primary {
 .comments-list { display: flex; flex-direction: column; gap: 12px; }
 .comment-line { display: flex; flex-direction: column; gap: 2px; }
 .comment-line p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.activity-line { margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.activity-line .meta { margin: 0; }
 .comment-line strong { color: var(--ink); }
 .comment-line button {
   align-self: flex-start;

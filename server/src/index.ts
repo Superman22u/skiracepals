@@ -4,6 +4,7 @@ import express, { type NextFunction, type Request, type Response } from "express
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { backfillStoredActivity } from "./activity";
 import { migrate } from "./db";
 import { authRouter } from "./routes/auth";
 import { catalogRouter } from "./routes/catalog";
@@ -42,6 +43,7 @@ const port = Number(process.env.PORT ?? 3001);
 try {
   if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is not set");
   await migrate();
+  await backfillStoredActivity();
   await seedIfEmpty();
   await seedPriorIfEmpty();
   await ensureAdmin();

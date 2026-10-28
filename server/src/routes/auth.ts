@@ -11,6 +11,7 @@ import {
   setAuthCookie,
   toPublicUser,
 } from "../auth";
+import { recordActivity } from "../activity";
 import { pool, query, withTx } from "../db";
 import { asyncRoute, isDuplicate, readBody } from "../http";
 import { pointsFor } from "../scores";
@@ -212,6 +213,7 @@ router.put(
         (req as AuthedRequest).user.id,
       ],
     );
+    await recordActivity((req as AuthedRequest).user.id, "settings", {});
     res.json({
       email48: body.email48,
       email24: body.email24,

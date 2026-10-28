@@ -3,6 +3,7 @@ import type { ResultSetHeader, RowDataPacket } from "mysql2";
 import { z } from "zod";
 import type { AuthedRequest } from "../auth";
 import { requireAdmin, requireUser } from "../auth";
+import { listActivity, recordActivity } from "../activity";
 import { fillDueBets } from "../bet-fill";
 import { addCalendarDays, isBetDue, isBettingOpen, zurichToday } from "../dates";
 import { rankField } from "../discipline-rank";
@@ -355,8 +356,8 @@ router.put(
       res.status(400).json({ error: message ?? "Use ranks 1 through 5" });
       return;
     }
-    const races = await query<RowDataPacket & { gender: "W" | "M"; raceDate: string }>(
-      "SELECT gender, race_date AS raceDate FROM races WHERE id = ?",
+    const races = await query<RowDataPacket & { place: string; discipline: string; gender: "W" | "M"; raceDate: string }>(
+      "SELECT place, discipline, gender, race_date AS raceDate FROM races WHERE id = ?",
       [id],
     );
     const race = races[0];
@@ -397,6 +398,12 @@ router.put(
         `INSERT INTO bet_picks (bet_id, skier_id, position) VALUES ${body.picks.map(() => "(?, ?, ?)").join(",")}`,
         body.picks.flatMap((pick) => [betId, pick.skierId, pick.position]),
       );
+    });
+    await recordActivity(user.id, "bet", {
+      place: race.place,
+      discipline: race.discipline,
+      gender: race.gender,
+      raceDate: String(race.raceDate).slice(0, 10),
     });
     res.status(204).end();
   }),
@@ -543,6 +550,7 @@ router.post(
       await conn.query("INSERT INTO tip_group_members (group_id, user_id) VALUES (?, ?)", [result.insertId, user.id]);
       return result.insertId;
     });
+    await recordActivity(user.id, "group", { action: "created", name: body.name });
     res.status(201).json({ id });
   }),
 );
@@ -554,7 +562,10 @@ router.post(
     if (!body) return;
     const group = await groupFor(req, res, true);
     if (!group) return;
-    const people = await query<RowDataPacket & { id: number }>("SELECT id FROM users WHERE id = ?", [body.userId]);
+    const people = await query<RowDataPacket & { id: number; nickname: string }>(
+      "SELECT id, nickname FROM users WHERE id = ?",
+      [body.userId],
+    );
     if (people.length === 0) {
       res.status(404).json({ error: "Unknown account" });
       return;
@@ -568,6 +579,11 @@ router.post(
       }
       throw error;
     }
+    await recordActivity((req as AuthedRequest).user.id, "group", {
+      action: "added",
+      name: group.name,
+      member: people[0].nickname,
+    });
     res.status(204).end();
   }),
 );
@@ -595,6 +611,12 @@ router.delete(
       res.status(404).json({ error: "Unknown account" });
       return;
     }
+    const member = group.members.find((person) => person.id === memberId);
+    await recordActivity(user.id, "group", {
+      action: "removed",
+      name: group.name,
+      member: member?.nickname ?? "",
+    });
     res.status(204).end();
   }),
 );
@@ -605,6 +627,7 @@ router.delete(
     const group = await groupFor(req, res, false);
     if (!group) return;
     await pool.query("DELETE FROM tip_groups WHERE id = ?", [group.id]);
+    await recordActivity((req as AuthedRequest).user.id, "group", { action: "deleted", name: group.name });
     res.status(204).end();
   }),
 );
@@ -668,6 +691,14 @@ router.delete(
       return;
     }
     res.status(204).end();
+  }),
+);
+
+router.get(
+  "/admin/activity",
+  requireAdmin,
+  asyncRoute(async (_req, res) => {
+    res.json({ activity: await listActivity() });
   }),
 );
 
