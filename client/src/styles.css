@@ -341,6 +341,50 @@ a.primary {
   font-size: 42px;
   margin: 8px 0 0;
 }
+.compare { display: flex; flex-direction: column; gap: 8px; }
+.compare-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.compare-title h2 { font-size: 26px; }
+.compare-points {
+  margin: 0;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 28px;
+  color: var(--pine);
+  white-space: nowrap;
+}
+.compare-cols,
+.compare-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) 1.6rem;
+  column-gap: 8px;
+  align-items: center;
+}
+.compare-cols {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.compare-cols span:first-child { grid-column: 2; }
+.compare-cols span:last-child { grid-column: 3; }
+.compare-row { padding: 7px 0 7px 6px; border-top: 1px solid var(--line); }
+.compare-row.exact { box-shadow: inset 3px 0 0 var(--pine); }
+.compare-row.near { box-shadow: inset 3px 0 0 #8fcea8; }
+.compare-row.off .compare-you strong {
+  background: #fff3cc;
+  border-radius: 4px;
+}
+.compare-name { min-width: 0; }
+.compare-name strong { display: block; font-size: 14px; line-height: 1.2; }
+.compare-name em, .compare-name small { display: block; font-size: 12px; }
+.compare-row .bib { width: 28px; height: 28px; border-radius: 8px; font-size: 16px; }
+.compare-pts { text-align: right; font-size: 16px; font-variant-numeric: tabular-nums; }
+.compare-pts.zero { color: var(--muted); font-weight: 650; }
 .slot { gap: 8px; }
 .slot-main, .skier-list button {
   flex: 1;

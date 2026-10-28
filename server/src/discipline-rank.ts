@@ -67,6 +67,24 @@ export function rankField(input: {
   });
 }
 
+/** One ranking only: this season's top names when any exist, otherwise last season's. */
+export function standingsList(
+  ranked: RankedSkier[],
+  limit = 10,
+): { source: RankNote; rows: { rank: number; name: string; nation: string }[] } | null {
+  const bySource = (note: RankNote) =>
+    ranked
+      .filter((skier): skier is RankedSkier & { rank: number } => skier.rankNote === note && skier.rank != null)
+      .sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name));
+  const season = bySource("this season");
+  const chosen = season.length > 0 ? season : bySource("last season");
+  if (chosen.length === 0) return null;
+  return {
+    source: season.length > 0 ? "this season" : "last season",
+    rows: chosen.slice(0, limit).map((skier) => ({ rank: skier.rank, name: skier.name, nation: skier.nation })),
+  };
+}
+
 function publicSkier(skier: Scored): FieldSkier {
   return { id: skier.id, name: skier.name, nation: skier.nation, gender: skier.gender };
 }

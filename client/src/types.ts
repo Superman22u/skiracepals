@@ -67,12 +67,11 @@ export type RaceDetail = {
     url: string;
     winner: string | null;
   }[];
-  suggestion: {
-    skierId: number;
-    name: string;
-    nation: string;
-    reason: string;
-  }[] | null;
+  thisSeasonRanking: boolean;
+  standings: {
+    source: "this season" | "last season";
+    rows: { rank: number; name: string; nation: string }[];
+  } | null;
   missingBets: string[] | null;
   offListBets: { nickname: string; athletes: string[] }[] | null;
 };

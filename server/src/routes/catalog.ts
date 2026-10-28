@@ -10,11 +10,12 @@ import { pool, query, withTx } from "../db";
 import { loadGroups } from "../groups";
 import { asyncRoute, isDuplicate, readBody } from "../http";
 import { placeKey } from "../names";
-import { lastYearDetail, lastYearIndex, matchKey, suggestionFor } from "../prior";
+import { lastYearDetail, lastYearIndex, matchKey } from "../prior";
 import { rankUsers, scorePick } from "../scoring";
 import { leaderboard, myRaceScores } from "../scores";
 import { StartListError } from "../fis-live";
 import { listDueReminders } from "../reminders";
+import { loadDisciplineStandings } from "../standings";
 import { importStartList } from "../start-lists";
 
 const router = Router();
@@ -294,6 +295,7 @@ router.get(
     const showResults = user.isAdmin || !bettingOpen;
     const scored = !bettingOpen && storedResults.length > 0;
     const actualBySkier = new Map(storedResults.map((result) => [Number(result.skierId), Number(result.position)]));
+    const ranking = await loadDisciplineStandings(race.gender, race.discipline);
     res.json({
       id: Number(race.id),
       place: race.place,
@@ -333,11 +335,10 @@ router.get(
           }))
         : [],
       lastYear: history.links,
+      thisSeasonRanking: ranking.thisSeasonStarted,
+      standings: ranking.standings,
       missingBets,
       offListBets,
-      suggestion: user.isAdmin
-        ? await suggestionFor(id, race.discipline, race.gender, history.finishes)
-        : null,
     });
   }),
 );

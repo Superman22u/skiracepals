@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { rankField } from "./discipline-rank";
+import { rankField, standingsList } from "./discipline-rank";
 
 const field = [
   { id: 1, name: "Mikaela Shiffrin", nation: "USA", gender: "W" as const },
@@ -45,4 +45,26 @@ test("this season's results lead, and equal points share a rank", () => {
   assert.equal(ranked[1].rankNote, "this season");
   assert.equal(ranked[2].name, "Lara Gut-Behrami");
   assert.equal(ranked[2].rankNote, "last season");
+  assert.equal(standingsList(ranked)?.source, "this season");
+  assert.deepEqual(
+    standingsList(ranked)?.rows.map((skier) => skier.name),
+    [ranked[0].name, ranked[1].name],
+  );
+});
+
+test("with no result this season, the list is last season only", () => {
+  const ranked = rankField({
+    skiers: field,
+    lastYear: [
+      { name: "Mikaela Shiffrin", nation: "USA", position: 1 },
+      { name: "Lara Gut-Behrami", nation: "SUI", position: 2 },
+    ],
+    season: [],
+  });
+  const list = standingsList(ranked);
+  assert.equal(list?.source, "last season");
+  assert.deepEqual(
+    list?.rows.map((skier) => skier.name),
+    ["Mikaela Shiffrin", "Lara Gut-Behrami"],
+  );
 });

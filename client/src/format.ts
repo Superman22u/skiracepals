@@ -10,6 +10,11 @@ export function fisRaceUrl(fisRaceId: number): string {
   return `https://www.fis-ski.com/DB/general/results.html?sectorcode=AL&raceid=${fisRaceId}#results`;
 }
 
+/** Official FIS World Cup standings. 2026 is last season, 2027 is this season. */
+export function cupStandingsUrl(seasonCode: 2026 | 2027, discipline: string, gender: "W" | "M"): string {
+  return `https://www.fis-ski.com/DB/alpine-skiing/cup-standings.html?sectorcode=AL&seasoncode=${seasonCode}&cupcode=WC&disciplinecode=${discipline}&gendercode=${gender}&nationcode=`;
+}
+
 export function rankLabel(position: number, lang: Lang): string {
   if (lang === "de") return `${position}.`;
   const ranks = ["1st", "2nd", "3rd", "4th", "5th"];

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
-import { fisRaceUrl, formatRaceDate, lastSeasonFis, rankLabel, translateReason } from "../format";
+import { cupStandingsUrl, fisRaceUrl, formatRaceDate, rankLabel } from "../format";
 import { useI18n } from "../i18n";
 import type { Discipline, Gender, RaceDetail, Skier } from "../types";
 
@@ -101,16 +101,6 @@ export function RacePage() {
       [next[index], next[target]] = [next[target], next[index]];
       return next;
     });
-  }
-
-  function applySuggestion() {
-    if (!race?.suggestion?.length) return;
-    const next: (Skier | null)[] = [null, null, null, null, null];
-    race.suggestion.forEach((pick, index) => {
-      next[index] = { id: pick.skierId, name: pick.name, nation: pick.nation, gender: race.gender };
-    });
-    setSlots(next);
-    setNotice("suggestionFilled");
   }
 
   async function saveBet() {
@@ -232,8 +222,6 @@ export function RacePage() {
   const filledResults =
     resultPrefix === -1 ? resultSlots : resultPrefix === 0 ? [] : resultSlots.slice(0, resultPrefix);
   const resultGap = resultPrefix !== -1 && resultSlots.slice(resultPrefix + 1).some(Boolean);
-  const leaders = skiers.filter((skier) => skier.rank != null).slice(0, 10);
-
   return (
     <div className="stack">
       <Link className="back" to="/">
@@ -266,7 +254,9 @@ export function RacePage() {
           {race.bettingOpen ? t("bettingOpen") : t("bettingClosed")}
         </p>
         {race.hasStartList ? <p className="rule">{t("startListReady")}</p> : null}
-        {race.points != null ? <p className="big-points">{t("pointsShort", { points: race.points })}</p> : null}
+        {race.points != null && race.picks.length === 0 ? (
+          <p className="big-points">{t("pointsShort", { points: race.points })}</p>
+        ) : null}
       </div>
       <div className="links">
         {race.fisRaceId != null ? (
@@ -280,32 +270,73 @@ export function RacePage() {
             {item.winner ? ` · ${t("wonBy", { winner: item.winner })}` : ""}
           </a>
         ))}
-        <a href={lastSeasonFis} target="_blank" rel="noreferrer">
-          {t("allLastSeason")}
+        <a href={cupStandingsUrl(2026, race.discipline, race.gender)} target="_blank" rel="noreferrer">
+          {t("lastYearStandings", { discipline: t(`discipline_${race.discipline}`) })}
         </a>
+        {race.thisSeasonRanking ? (
+          <a href={cupStandingsUrl(2027, race.discipline, race.gender)} target="_blank" rel="noreferrer">
+            {t("thisYearStandings", { discipline: t(`discipline_${race.discipline}`) })}
+          </a>
+        ) : null}
       </div>
-      {leaders.length > 0 ? (
-        <section className="card disc-rank">
-          <h2>{t("disciplineRanking", { discipline: t(`discipline_${race.discipline}`) })}</h2>
-          <p className="muted">{t("disciplineRankHelp")}</p>
-          <ol>
-            {leaders.map((skier) => (
-              <li key={skier.id}>
-                <b>{skier.rank}</b>
-                <span>
-                  <strong>{skier.name}</strong>
-                  <em>
-                    {skier.nation} · {skier.rankNote === "last season" ? t("lastSeason") : t("thisSeason")}
-                  </em>
-                </span>
-              </li>
-            ))}
-          </ol>
-        </section>
-      ) : null}
       {notice ? <p className="note">{t(notice, { name: noticeName, count: noticeName })}</p> : null}
       {error ? <p className="alert">{t(error)}</p> : null}
 
+      {race.hasResults && race.picks.length > 0 ? (
+        <section className="card compare">
+          {race.filled === "day-before" ? <p className="note">{t("filledDayBefore")}</p> : null}
+          {race.filled === "after-close" ? <p className="note">{t("filledAfterClose")}</p> : null}
+          {race.hasStartList && race.picks.some((pick) => !pick.onStartList) ? (
+            <p className="alert">
+              {t("betOffList", {
+                names: race.picks
+                  .filter((pick) => !pick.onStartList)
+                  .map((pick) => pick.name)
+                  .join(", "),
+              })}
+            </p>
+          ) : null}
+          <div className="compare-title">
+            <h2>{t("yourFirstFive")}</h2>
+            {race.points != null ? <p className="compare-points">{t("pointsShort", { points: race.points })}</p> : null}
+          </div>
+          <div className="compare-cols">
+            <span>{t("compareYou")}</span>
+            <span>{t("result")}</span>
+          </div>
+          {[1, 2, 3, 4, 5].map((position) => {
+            const pick = race.picks.find((item) => item.position === position);
+            const result = race.results.find((item) => item.position === position);
+            const tone = pick?.points === 3 ? "exact" : pick?.points === 1 ? "near" : "";
+            return (
+              <div className={`compare-row ${tone}${pick && !pick.onStartList ? " off" : ""}`} key={position}>
+                <span className="bib">{position}</span>
+                <span className="compare-name compare-you">
+                  {pick ? (
+                    <>
+                      <strong>{pick.name}</strong>
+                      <em>{pick.nation}</em>
+                    </>
+                  ) : (
+                    <em>—</em>
+                  )}
+                </span>
+                <span className="compare-name">
+                  {result ? (
+                    <>
+                      <strong>{result.name}</strong>
+                      <em>{result.nation}</em>
+                    </>
+                  ) : (
+                    <em>—</em>
+                  )}
+                </span>
+                <b className={pick?.points ? "compare-pts" : "compare-pts zero"}>{pick?.points ?? 0}</b>
+              </div>
+            );
+          })}
+        </section>
+      ) : (
       <section className="stack">
         <h2>{t("yourFirstFive")}</h2>
         {race.filled === "day-before" ? <p className="note">{t("filledDayBefore")}</p> : null}
@@ -372,19 +403,16 @@ export function RacePage() {
                 <strong>{pick.name}</strong>
                 <em>{pick.nation}</em>
                 {pick.onStartList ? null : <small>{t("notOnStartList")}</small>}
-                {race.hasResults ? (
-                  <small>{pick.actual ? t("finished", { rank: rankLabel(pick.actual, lang) }) : t("outsideTop")}</small>
-                ) : (
-                  <small>{t("waitingResult")}</small>
-                )}
+                <small>{t("waitingResult")}</small>
               </span>
               {pick.points != null ? <b>{pick.points}</b> : null}
             </div>
           ))
         )}
       </section>
+      )}
 
-      {race.hasResults ? (
+      {race.hasResults && race.picks.length === 0 ? (
         <section className="stack">
           <h2>{t("officialTop")}</h2>
           {race.results.slice(0, 5).map((result) => (
@@ -399,32 +427,30 @@ export function RacePage() {
         </section>
       ) : null}
 
+      {race.bettingOpen && race.standings ? (
+        <section className="card disc-rank">
+          <h2>
+            {t(race.standings.source === "this season" ? "thisYearStandings" : "lastYearStandings", {
+              discipline: t(`discipline_${race.discipline}`),
+            })}
+          </h2>
+          <ol>
+            {race.standings.rows.map((skier) => (
+              <li key={`${skier.rank}-${skier.name}`}>
+                <b>{skier.rank}</b>
+                <span>
+                  <strong>{skier.name}</strong>
+                  <em>{skier.nation}</em>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+
       {user.isAdmin ? (
         <section className="stack admin">
           <h2>{t("administrator")}</h2>
-          {race.suggestion && race.suggestion.length > 0 ? (
-            <div className="card suggest">
-              <h3>{t("suggestedTop")}</h3>
-              <p className="muted">{t("suggestionHelp")}</p>
-              {race.suggestion.map((pick, index) => (
-                <div className="slot readonly" key={pick.skierId}>
-                  <span className="bib">{index + 1}</span>
-                  <span>
-                    <strong>{pick.name}</strong>
-                    <em>{pick.nation}</em>
-                    <small>{translateReason(pick.reason, lang)}</small>
-                  </span>
-                </div>
-              ))}
-              {race.bettingOpen ? (
-                <button className="primary" type="button" onClick={applySuggestion}>
-                  {t("useSuggestion")}
-                </button>
-              ) : null}
-            </div>
-          ) : (
-            <p className="muted">{t("noSuggestion")}</p>
-          )}
           <div className="stack">
             <h3>{t("officialResult")}</h3>
             <p className="muted">{t("officialResultHelp")}</p>
